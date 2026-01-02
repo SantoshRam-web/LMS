@@ -6,6 +6,6 @@ import org.springframework.stereotype.Repository;
 import com.lms.www.model.AuditLog;
 
 @Repository
-public interface AuditRepository
+public interface AuditLogRepository
         extends JpaRepository<AuditLog, Long> {
 }

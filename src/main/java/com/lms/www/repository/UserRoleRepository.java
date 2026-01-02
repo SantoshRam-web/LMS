@@ -1,9 +1,15 @@
 package com.lms.www.repository;
 
-import com.lms.www.model.User;
-import com.lms.www.model.UserRole;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import com.lms.www.model.User;
+import com.lms.www.model.UserRole;
+
 public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
-    java.util.List<UserRole> findByUser(User user);
+
+    List<UserRole> findByUser(User user);
+
+    void deleteByUser(User user);
 }
