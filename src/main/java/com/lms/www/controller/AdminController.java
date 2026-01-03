@@ -1,5 +1,7 @@
 package com.lms.www.controller;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -97,6 +99,55 @@ public class AdminController {
         adminService.updateUser(userId, updatedUser, getLoggedInUser(), request);
         return ResponseEntity.ok("User updated");
     }
+    
+ // ---------- STUDENTS ----------
+    @GetMapping("/getstudents")
+    public ResponseEntity<?> getAllStudents() {
+        return ResponseEntity.ok(adminService.getAllStudents());
+    }
+
+    @GetMapping("/getstudents/{studentId}")
+    public ResponseEntity<?> getStudentById(@PathVariable Long studentId) {
+        return ResponseEntity.ok(adminService.getStudentByStudentId(studentId));
+    }
+
+    // ---------- PARENTS ----------
+    @GetMapping("/getparents")
+    public ResponseEntity<?> getAllParents() {
+        return ResponseEntity.ok(adminService.getAllParents());
+    }
+
+    @GetMapping("/getparents/{parentId}")
+    public ResponseEntity<?> getParentById(@PathVariable Long parentId) {
+        return ResponseEntity.ok(adminService.getParentByParentId(parentId));
+    }
+
+    // ---------- INSTRUCTORS ----------
+    @GetMapping("/getinstructors")
+    public ResponseEntity<?> getAllInstructors() {
+        return ResponseEntity.ok(adminService.getAllInstructors());
+    }
+
+    @GetMapping("/getinstructors/{instructorId}")
+    public ResponseEntity<?> getInstructorById(@PathVariable Long instructorId) {
+        return ResponseEntity.ok(adminService.getInstructorByInstructorId(instructorId));
+    }
+
+    // ---------- MAP ----------
+    @PostMapping("/parent-student-map")
+    public ResponseEntity<?> mapParentStudent(
+            @RequestBody Map<String, Long> body,
+            HttpServletRequest request
+    ) {
+        adminService.mapParentToStudent(
+                body.get("parentId"),
+                body.get("studentId"),
+                getLoggedInUser(),
+                request
+        );
+        return ResponseEntity.ok("Parent mapped to student");
+    }
+
 
 }
 

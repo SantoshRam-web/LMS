@@ -4,6 +4,9 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.List;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity
 @Table(name = "students")
@@ -22,6 +25,9 @@ public class Student {
     private User user;
 
     private LocalDate dob;
-
     private String gender;
+
+    @OneToMany(mappedBy = "student", fetch = FetchType.EAGER)
+    @JsonManagedReference
+    private List<ParentStudentRelation> parents;
 }

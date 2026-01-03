@@ -3,6 +3,8 @@ package com.lms.www.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 @Entity
 @Table(name = "parent_student_relation")
 @Getter
@@ -16,10 +18,12 @@ public class ParentStudentRelation {
     private Long relId;
 
     @ManyToOne
-    @JoinColumn(name = "parent_id", nullable = false)
+    @JoinColumn(name = "parent_id")
+    @JsonBackReference
     private Parent parent;
 
     @ManyToOne
-    @JoinColumn(name = "student_id", nullable = false)
+    @JoinColumn(name = "student_id")
+    @JsonBackReference
     private Student student;
 }

@@ -13,6 +13,7 @@ import com.lms.www.controller.request.StudentRequest;
 import com.lms.www.model.AuditLog;
 import com.lms.www.model.Instructor;
 import com.lms.www.model.Parent;
+import com.lms.www.model.ParentStudentRelation;
 import com.lms.www.model.Role;
 import com.lms.www.model.Student;
 import com.lms.www.model.User;
@@ -21,6 +22,7 @@ import com.lms.www.repository.AuditLogRepository;
 import com.lms.www.repository.InstructorRepository;
 import com.lms.www.repository.LoginHistoryRepository;
 import com.lms.www.repository.ParentRepository;
+import com.lms.www.repository.ParentStudentRelationRepository;
 import com.lms.www.repository.RoleRepository;
 import com.lms.www.repository.StudentRepository;
 import com.lms.www.repository.UserRepository;
@@ -42,6 +44,7 @@ public class AdminServiceImpl implements AdminService {
     private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
     private final LoginHistoryRepository loginHistoryRepository;
+    private final ParentStudentRelationRepository parentStudentRelationRepository;
 
 
     public AdminServiceImpl(
@@ -53,6 +56,7 @@ public class AdminServiceImpl implements AdminService {
             ParentRepository parentRepository,
             AuditLogRepository auditLogRepository,
             LoginHistoryRepository loginHistoryRepository,
+            ParentStudentRelationRepository parentStudentRelationRepository,
             PasswordEncoder passwordEncoder
     ) {
         this.userRepository = userRepository;
@@ -64,6 +68,8 @@ public class AdminServiceImpl implements AdminService {
         this.auditLogRepository = auditLogRepository;
         this.loginHistoryRepository = loginHistoryRepository;
         this.passwordEncoder = passwordEncoder;
+        this.parentStudentRelationRepository = parentStudentRelationRepository;
+
     }
 
 
@@ -196,6 +202,75 @@ public class AdminServiceImpl implements AdminService {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
+    
+    @Override
+    public List<Student> getAllStudents() {
+        return studentRepository.findAll();
+    }
+
+    @Override
+    public List<Parent> getAllParents() {
+        return parentRepository.findAll();
+    }
+
+    @Override
+    public List<Instructor> getAllInstructors() {
+        return instructorRepository.findAll();
+    }
+    
+    @Override
+    public Student getStudentByStudentId(Long studentId) {
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        // force load parents
+        parentStudentRelationRepository.findByStudent(student)
+                .forEach(r -> r.getParent().getUser().getEmail());
+
+        return student;
+    }
+    
+    @Override
+    public Parent getParentByParentId(Long parentId) {
+
+        Parent parent = parentRepository.findById(parentId)
+                .orElseThrow(() -> new RuntimeException("Parent not found"));
+
+        parentStudentRelationRepository.findByParent(parent)
+                .forEach(r -> r.getStudent().getUser().getEmail());
+
+        return parent;
+    }
+    
+    @Override
+    public Instructor getInstructorByInstructorId(Long instructorId) {
+        return instructorRepository.findById(instructorId)
+                .orElseThrow(() -> new RuntimeException("Instructor not found"));
+    }
+    
+    @Override
+    public void mapParentToStudent(
+            Long parentId,
+            Long studentId,
+            User admin,
+            HttpServletRequest request
+    ) {
+        Parent parent = parentRepository.findById(parentId)
+                .orElseThrow(() -> new RuntimeException("Parent not found"));
+
+        Student student = studentRepository.findById(studentId)
+                .orElseThrow(() -> new RuntimeException("Student not found"));
+
+        ParentStudentRelation rel = new ParentStudentRelation();
+        rel.setParent(parent);
+        rel.setStudent(student);
+
+        parentStudentRelationRepository.save(rel);
+
+        audit("MAP", "PARENT_STUDENT", rel.getRelId(), admin, request);
+    }
+
 
     // ---------- DELETE ----------
     @Override

@@ -22,37 +22,38 @@ public class SecurityConfig {
 
         http
             .csrf(csrf -> csrf.disable())
+
             .authorizeHttpRequests(auth -> auth
 
-                // AUTH
-                .requestMatchers("/auth/**").permitAll()
+                // 🔓 PUBLIC
+                .requestMatchers("/auth/login").permitAll()
 
-                // ADMIN
+                // 🔐 ADMIN
                 .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
 
-                // STUDENT
+                // 🔐 STUDENT
                 .requestMatchers("/student/**").hasAuthority("ROLE_STUDENT")
 
-                // INSTRUCTOR
+                // 🔐 INSTRUCTOR
                 .requestMatchers("/instructor/**").hasAuthority("ROLE_INSTRUCTOR")
 
-                // PARENT
+                // 🔐 PARENT
                 .requestMatchers("/parent/**").hasAuthority("ROLE_PARENT")
 
-                // PROFILE
+                // 🔐 SELF PROFILE
                 .requestMatchers("/me/**").authenticated()
 
                 .anyRequest().authenticated()
             )
+
             .sessionManagement(sess ->
                 sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
             )
+
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
-
-
 
     @Bean
     BCryptPasswordEncoder passwordEncoder() {
