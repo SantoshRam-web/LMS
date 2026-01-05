@@ -40,4 +40,10 @@ public class StudentController {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Student not found"));
     }
+    
+    @GetMapping("/test")
+    public String testStudentAccess() {
+        return "STUDENT ACCESS OK";
+    }
+
 }

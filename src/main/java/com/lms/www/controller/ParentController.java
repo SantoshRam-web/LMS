@@ -32,6 +32,12 @@ public class ParentController {
         this.relationRepository = relationRepository;
         this.userRepository = userRepository;
     }
+    
+    @GetMapping("/test")
+    public String testParentAccess() {
+        return "PARENT ACCESS OK";
+    }
+
 
     // ✅ GET LOGGED-IN PARENT PROFILE + CHILDREN
     @GetMapping("/me")

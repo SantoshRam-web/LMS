@@ -14,27 +14,43 @@ import jakarta.servlet.http.HttpServletRequest;
 
 public interface AdminService {
 
+    // ---------- CREATE ----------
     void createStudent(StudentRequest request, User admin, HttpServletRequest httpRequest);
     void createInstructor(InstructorRequest request, User admin, HttpServletRequest httpRequest);
     void createParent(ParentRequest request, User admin, HttpServletRequest httpRequest);
 
+    // ---------- READ ----------
     List<User> getAllUsers();
     User getUserByUserId(Long userId);
     User getUserByEmail(String email);
 
-    void updateUser(Long userId, User updatedUser, User admin, HttpServletRequest request);
-
-    void deleteUser(Long userId, User admin, HttpServletRequest request);
-
     List<Student> getAllStudents();
-    Student getStudentByStudentId(Long studentId);
-
     List<Parent> getAllParents();
-    Parent getParentByParentId(Long parentId);
-
     List<Instructor> getAllInstructors();
+
+    Student getStudentByStudentId(Long studentId);
+    Parent getParentByParentId(Long parentId);
     Instructor getInstructorByInstructorId(Long instructorId);
 
-    void mapParentToStudent(Long parentId, Long studentId, User admin, HttpServletRequest request);
+    // ---------- UPDATE ----------
+    void updateUser(Long userId, User updatedUser, User admin, HttpServletRequest request);
 
+    // ---------- DELETE ----------
+    void deleteUser(Long userId, User admin, HttpServletRequest request);
+
+    // ---------- MAP ----------
+    void mapParentToStudent(
+            Long parentId,
+            Long studentId,
+            User admin,
+            HttpServletRequest request
+    );
+
+    // ---------- ENABLE / DISABLE ----------
+    void setUserEnabled(
+            Long userId,
+            boolean enabled,
+            User admin,
+            HttpServletRequest request
+    );
 }

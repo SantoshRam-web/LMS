@@ -28,6 +28,7 @@ import com.lms.www.repository.StudentRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserRoleRepository;
 import com.lms.www.service.AdminService;
+import com.lms.www.service.EmailService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -45,6 +46,7 @@ public class AdminServiceImpl implements AdminService {
     private final PasswordEncoder passwordEncoder;
     private final LoginHistoryRepository loginHistoryRepository;
     private final ParentStudentRelationRepository parentStudentRelationRepository;
+    private final EmailService emailService;
 
 
     public AdminServiceImpl(
@@ -57,7 +59,8 @@ public class AdminServiceImpl implements AdminService {
             AuditLogRepository auditLogRepository,
             LoginHistoryRepository loginHistoryRepository,
             ParentStudentRelationRepository parentStudentRelationRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            EmailService emailService
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -69,7 +72,8 @@ public class AdminServiceImpl implements AdminService {
         this.loginHistoryRepository = loginHistoryRepository;
         this.passwordEncoder = passwordEncoder;
         this.parentStudentRelationRepository = parentStudentRelationRepository;
-
+        this.emailService = emailService;
+        
     }
 
 
@@ -145,6 +149,8 @@ public class AdminServiceImpl implements AdminService {
 
         studentRepository.save(student);
         audit("CREATE", "STUDENT", user.getUserId(), admin, httpRequest);
+        emailService.sendRegistrationMail(user, "STUDENT");
+
     }
 
     @Override
@@ -164,6 +170,8 @@ public class AdminServiceImpl implements AdminService {
 
         instructorRepository.save(instructor);
         audit("CREATE", "INSTRUCTOR", user.getUserId(), admin, httpRequest);
+        emailService.sendRegistrationMail(user, "INSTRUCTOR");
+
     }
 
     @Override
@@ -183,6 +191,8 @@ public class AdminServiceImpl implements AdminService {
 
         parentRepository.save(parent);
         audit("CREATE", "PARENT", user.getUserId(), admin, httpRequest);
+        emailService.sendRegistrationMail(user, "PARENT");
+
     }
 
     // ---------- READ ----------
@@ -323,5 +333,28 @@ public class AdminServiceImpl implements AdminService {
 
         audit("UPDATE", "USER", userId, admin, request);
     }
+    
+    @Override
+    public void setUserEnabled(
+            Long userId,
+            boolean enabled,
+            User admin,
+            HttpServletRequest request
+    ) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setEnabled(enabled);
+        userRepository.save(user);
+
+        audit(
+                enabled ? "ENABLE" : "DISABLE",
+                "USER",
+                userId,
+                admin,
+                request
+        );
+    }
+
 
 }

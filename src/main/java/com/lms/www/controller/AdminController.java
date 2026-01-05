@@ -147,6 +147,27 @@ public class AdminController {
         );
         return ResponseEntity.ok("Parent mapped to student");
     }
+    
+ // ---------- ENABLE / DISABLE USER ----------
+
+    @PatchMapping("/users/{userId}/disable")
+    public ResponseEntity<?> disableUser(
+            @PathVariable Long userId,
+            HttpServletRequest request
+    ) {
+        adminService.setUserEnabled(userId, false, getLoggedInUser(), request);
+        return ResponseEntity.ok("User disabled");
+    }
+
+    @PatchMapping("/users/{userId}/enable")
+    public ResponseEntity<?> enableUser(
+            @PathVariable Long userId,
+            HttpServletRequest request
+    ) {
+        adminService.setUserEnabled(userId, true, getLoggedInUser(), request);
+        return ResponseEntity.ok("User enabled");
+    }
+
 
 
 }

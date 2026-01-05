@@ -3,6 +3,8 @@ package com.lms.www.config;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
@@ -12,12 +14,18 @@ import java.util.List;
 @Component
 public class JwtUtil {
 
-    private static final String SECRET =
-            "lms_secure_jwt_secret_key_which_is_very_long_123456";
+    @Value("${jwt.secret}")
+    private String secret;
 
-    private static final long EXPIRATION_TIME = 1000 * 60 * 60;
+    @Value("${jwt.expiration}")
+    private long expirationTime;
 
-    private final SecretKey key = Keys.hmacShaKeyFor(SECRET.getBytes());
+    private SecretKey key;
+
+    @PostConstruct
+    public void init() {
+        this.key = Keys.hmacShaKeyFor(secret.getBytes());
+    }
 
     public String generateToken(
             Long userId,
@@ -31,7 +39,7 @@ public class JwtUtil {
                 .claim("roles", roles)
                 .claim("permissions", permissions)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .setExpiration(new Date(System.currentTimeMillis() + expirationTime))
                 .signWith(key)
                 .compact();
     }
@@ -63,7 +71,7 @@ public class JwtUtil {
     }
 
     public boolean validateToken(String token) {
-        extractClaims(token);
+        extractClaims(token); // throws exception if invalid/expired
         return true;
     }
 }
