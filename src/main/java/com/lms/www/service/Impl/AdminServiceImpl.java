@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
+import com.lms.www.model.Address;
 import com.lms.www.model.AuditLog;
 import com.lms.www.model.Instructor;
 import com.lms.www.model.Parent;
@@ -73,6 +74,7 @@ public class AdminServiceImpl implements AdminService {
         this.passwordEncoder = passwordEncoder;
         this.parentStudentRelationRepository = parentStudentRelationRepository;
         this.emailService = emailService;
+
         
     }
 
@@ -333,6 +335,64 @@ public class AdminServiceImpl implements AdminService {
 
         audit("UPDATE", "USER", userId, admin, request);
     }
+    
+    @Transactional
+    public User createUser(User user) {
+
+        if (user.getAddress() == null) {
+            throw new RuntimeException("Address is mandatory");
+        }
+
+        Address address = user.getAddress();
+
+        // bi-directional linking (CRITICAL)
+        address.setUser(user);
+        user.setAddress(address);
+
+        return userRepository.save(user);
+    }
+    
+
+     // ---------- ADDRESS ----------
+     @Override
+     public Address getAddressByEmail(String email) {
+
+         User user = getUserByEmail(email);
+
+         if (user.getAddress() == null) {
+             throw new RuntimeException("Address not found");
+         }
+
+         return user.getAddress();
+     }
+
+     @Override
+     public Address updateAddress(
+             Long userId,
+             Address newAddress,
+             User admin,
+             HttpServletRequest request
+     ) {
+
+         User user = getUserByUserId(userId);
+         Address existing = user.getAddress();
+
+         if (existing == null) {
+             throw new RuntimeException("Address not found");
+         }
+
+         existing.setPinCode(newAddress.getPinCode());
+         existing.setDistrict(newAddress.getDistrict());
+         existing.setMandal(newAddress.getMandal());
+         existing.setCity(newAddress.getCity());
+         existing.setVillage(newAddress.getVillage());
+         existing.setDNo(newAddress.getDNo());
+
+         audit("UPDATE", "ADDRESS", existing.getAddressId(), admin, request);
+
+         return existing;
+     }
+
     
     @Override
     public void setUserEnabled(

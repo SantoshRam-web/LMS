@@ -5,6 +5,7 @@ import java.util.List;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
+import com.lms.www.model.Address;
 import com.lms.www.model.Instructor;
 import com.lms.www.model.Parent;
 import com.lms.www.model.Student;
@@ -53,4 +54,8 @@ public interface AdminService {
             User admin,
             HttpServletRequest request
     );
+
+    // ---------- ADDRESS (ADDED) ----------
+    Address getAddressByEmail(String email);
+    Address updateAddress(Long userId, Address address, User admin, HttpServletRequest request);
 }

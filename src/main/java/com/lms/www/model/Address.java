@@ -1,31 +1,35 @@
 package com.lms.www.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
-
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
 @Entity
 @Table(name = "address")
+@Getter
+@Setter
 public class Address {
 
     @Id
-    @Column(name = "url_id")
-    private Long urlId;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "address_id")
+    private Long addressId;
 
+    // 🔴 prevent recursion
+    @JsonIgnore
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    private User user;
+
+    @Column(name = "pin_code")
     private Long pinCode;
+
     private String district;
     private String mandal;
     private String city;
     private String village;
 
     @Column(name = "d_no")
-    private Long doorNo;
+    private Long dNo;
 }

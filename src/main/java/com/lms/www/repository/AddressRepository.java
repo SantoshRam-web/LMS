@@ -1,11 +1,12 @@
 package com.lms.www.repository;
 
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 
 import com.lms.www.model.Address;
+import com.lms.www.model.User;
 
-@Repository
-public interface AddressRepository
-        extends JpaRepository<Address, Long> {
+public interface AddressRepository extends JpaRepository<Address, Long> {
+    Optional<Address> findByUser(User user);
 }

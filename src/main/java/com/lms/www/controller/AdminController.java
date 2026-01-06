@@ -16,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
+import com.lms.www.model.Address;
 import com.lms.www.model.User;
+import com.lms.www.service.AddressService;
 import com.lms.www.service.AdminService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,10 +28,13 @@ import jakarta.servlet.http.HttpServletRequest;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AddressService addressService;
 
-    public AdminController(AdminService adminService) {
+    public AdminController(AdminService adminService, AddressService addressService) {
         this.adminService = adminService;
+        this.addressService = addressService;
     }
+
 
     // ---------- CREATE ----------
     @PostMapping("/students")
@@ -167,6 +172,46 @@ public class AdminController {
         adminService.setUserEnabled(userId, true, getLoggedInUser(), request);
         return ResponseEntity.ok("User enabled");
     }
+    
+ 
+
+ // ---------- ADDRESS (ADMIN) ----------
+
+    @PostMapping("/users/{userId}/addAddress")
+    public ResponseEntity<?> addAddress(
+            @PathVariable Long userId,
+            @RequestBody Address address,
+            HttpServletRequest request
+    ) {
+        addressService.addAddress(userId, address, getLoggedInUser(), request);
+        return ResponseEntity.ok("Address added successfully");
+    }
+
+    @GetMapping("/users/{userId}/getAddress")
+    public ResponseEntity<?> getAddress(@PathVariable Long userId) {
+        return ResponseEntity.ok(addressService.getAddress(userId));
+    }
+
+    @PatchMapping("/users/{userId}/updateAddress")
+    public ResponseEntity<?> updateAddress(
+            @PathVariable Long userId,
+            @RequestBody Address address,
+            HttpServletRequest request
+    ) {
+        addressService.updateAddress(userId, address, getLoggedInUser(), request);
+        return ResponseEntity.ok("Address updated successfully");
+    }
+
+    @DeleteMapping("/users/{userId}/deleteAddress")
+    public ResponseEntity<?> deleteAddress(
+            @PathVariable Long userId,
+            HttpServletRequest request
+    ) {
+        addressService.deleteAddress(userId, getLoggedInUser(), request);
+        return ResponseEntity.ok("Address deleted successfully");
+    }
+
+
 
 
 
