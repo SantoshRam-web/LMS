@@ -17,6 +17,7 @@ import com.lms.www.model.Parent;
 import com.lms.www.model.ParentStudentRelation;
 import com.lms.www.model.Role;
 import com.lms.www.model.Student;
+import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.model.UserRole;
 import com.lms.www.repository.AuditLogRepository;
@@ -26,6 +27,7 @@ import com.lms.www.repository.ParentRepository;
 import com.lms.www.repository.ParentStudentRelationRepository;
 import com.lms.www.repository.RoleRepository;
 import com.lms.www.repository.StudentRepository;
+import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserRoleRepository;
 import com.lms.www.service.AdminService;
@@ -48,6 +50,8 @@ public class AdminServiceImpl implements AdminService {
     private final LoginHistoryRepository loginHistoryRepository;
     private final ParentStudentRelationRepository parentStudentRelationRepository;
     private final EmailService emailService;
+    private final SystemSettingsRepository systemSettingsRepository;
+
 
 
     public AdminServiceImpl(
@@ -61,7 +65,8 @@ public class AdminServiceImpl implements AdminService {
             LoginHistoryRepository loginHistoryRepository,
             ParentStudentRelationRepository parentStudentRelationRepository,
             PasswordEncoder passwordEncoder,
-            EmailService emailService
+            EmailService emailService,
+            SystemSettingsRepository systemSettingsRepository
     ) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
@@ -74,7 +79,7 @@ public class AdminServiceImpl implements AdminService {
         this.passwordEncoder = passwordEncoder;
         this.parentStudentRelationRepository = parentStudentRelationRepository;
         this.emailService = emailService;
-
+        this.systemSettingsRepository = systemSettingsRepository;
         
     }
 
@@ -91,6 +96,15 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("User already exists with email: " + email);
         }
 
+        SystemSettings settings = systemSettingsRepository.findById(1L)
+                .orElseThrow(() -> new RuntimeException("System settings not found"));
+
+        if (password == null || password.length() < settings.getPassLength()) {
+            throw new RuntimeException(
+                    "Password must be at least " + settings.getPassLength() + " characters"
+            );
+        }
+
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -101,6 +115,7 @@ public class AdminServiceImpl implements AdminService {
 
         return userRepository.save(user);
     }
+
 
     private void assignRole(User user, String roleName) {
         Role role = roleRepository.findByRoleName(roleName)

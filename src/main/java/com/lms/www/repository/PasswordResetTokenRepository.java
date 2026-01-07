@@ -14,5 +14,7 @@ public interface PasswordResetTokenRepository
 
     Optional<PasswordResetTokens> findByResetToken(String resetToken);
 
+    Optional<PasswordResetTokens> findByUser(User user);
+
     void deleteByUser(User user);
 }
