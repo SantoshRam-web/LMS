@@ -1,5 +1,7 @@
 package com.lms.www.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -31,4 +33,8 @@ public class PasswordResetTokens {
 
     @Column(name = "reset_token")
     private String resetToken;
+
+    @Column(name = "created_time")
+    private LocalDateTime createdTime;
 }
+

@@ -1,5 +1,10 @@
 package com.lms.www.service;
 
-public class PasswordResetService {
+public interface PasswordResetService {
 
+    void resetPassword(
+            Long userId,
+            String newPassword,
+            String ipAddress
+    );
 }

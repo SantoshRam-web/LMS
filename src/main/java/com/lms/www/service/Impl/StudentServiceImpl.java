@@ -1,11 +1,12 @@
 package com.lms.www.service.Impl;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.lms.www.model.Student;
 import com.lms.www.repository.StudentRepository;
 import com.lms.www.service.StudentService;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class StudentServiceImpl implements StudentService {

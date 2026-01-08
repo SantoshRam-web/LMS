@@ -1,8 +1,8 @@
 package com.lms.www.service;
 
-import com.lms.www.model.Role;
-
 import java.util.List;
+
+import com.lms.www.model.Role;
 
 public interface RoleService {
 

@@ -92,17 +92,20 @@ public class AdminServiceImpl implements AdminService {
             String password,
             String phone
     ) {
+    	SystemSettings settings = systemSettingsRepository.findById(1L)
+    		    .orElseThrow(() -> new RuntimeException("System settings not found"));
+
+    		if (password.length() < settings.getPassLength()) {
+    		    throw new RuntimeException(
+    		        "Password must be at least " + settings.getPassLength() + " characters"
+    		    );
+    		}
+
+
+
+
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("User already exists with email: " + email);
-        }
-
-        SystemSettings settings = systemSettingsRepository.findById(1L)
-                .orElseThrow(() -> new RuntimeException("System settings not found"));
-
-        if (password == null || password.length() < settings.getPassLength()) {
-            throw new RuntimeException(
-                    "Password must be at least " + settings.getPassLength() + " characters"
-            );
         }
 
         User user = new User();
@@ -115,6 +118,7 @@ public class AdminServiceImpl implements AdminService {
 
         return userRepository.save(user);
     }
+
 
 
     private void assignRole(User user, String roleName) {

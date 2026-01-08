@@ -1,8 +1,8 @@
 package com.lms.www.service;
 
-import com.lms.www.model.User;
-
 import java.time.LocalDateTime;
+
+import com.lms.www.model.User;
 
 public interface EmailService {
 
