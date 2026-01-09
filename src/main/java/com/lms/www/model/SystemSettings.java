@@ -2,6 +2,8 @@ package com.lms.www.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -14,22 +16,40 @@ import lombok.Setter;
 public class SystemSettings {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "setting_key")
     private Long settingKey;
 
-    @Column(name = "max_login_attempts")
+    @Column(name = "user_id", nullable = false, unique = true)
+    private Long userId;
+
+    @Column(name = "max_login_attempts", nullable = false)
     private Long maxLoginAttempts;
 
-    @Column(name = "acc_lock_duration")
+    @Column(name = "acc_lock_duration", nullable = false)
     private Long accLockDuration; // minutes
 
-    @Column(name = "pass_expiry_days")
+    @Column(name = "pass_expiry_days", nullable = false)
     private Long passExpiryDays;
 
-    @Column(name = "pass_length")
+    @Column(name = "pass_length", nullable = false)
     private Long passLength;
-    
+
+    @Column(name = "jwt_expiry_mins")
+    private Long jwtExpiryMins;
+
+    @Column(name = "session_timeout")
+    private Long sessionTimeout;
+
+    @Column(name = "multi_session")
+    private Boolean multiSession;
+
+    @Column(name = "enable_login_audit")
+    private Boolean enableLoginAudit;
+
     @Column(name = "enable_audit_log")
     private Boolean enableAuditLog;
 
+    @Column(name = "default_user_role")
+    private String defaultUserRole;
 }

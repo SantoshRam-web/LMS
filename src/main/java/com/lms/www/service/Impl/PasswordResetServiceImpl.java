@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.model.AuditLog;
+import com.lms.www.model.PasswordResetTokens;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.repository.AuditLogRepository;
@@ -42,26 +43,31 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Override
     public void resetPassword(Long userId, String newPassword, String ipAddress) {
 
-        SystemSettings settings =
-                systemSettingsRepository.findById(userId)
-                        .orElseThrow(() ->
-                                new RuntimeException("System settings not found"));
+        SystemSettings settings = systemSettingsRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("System settings not found"));
 
         if (newPassword.length() < settings.getPassLength()) {
             throw new RuntimeException(
-                    "Password must be at least " +
-                            settings.getPassLength() + " characters"
+                    "Password must be at least " + settings.getPassLength() + " characters"
             );
         }
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
-        // ❗ DO NOT DELETE reset token (history retained)
+        // Ensure reset token exists (history)
+        passwordResetTokenRepository
+                .findByUser(user)
+                .orElseGet(() -> {
+                    PasswordResetTokens t = new PasswordResetTokens();
+                    t.setUser(user);
+                    t.setResetToken("MANUAL_RESET_" + System.currentTimeMillis());
+                    return passwordResetTokenRepository.save(t);
+                });
 
         if (Boolean.TRUE.equals(settings.getEnableAuditLog())) {
             AuditLog log = new AuditLog();
