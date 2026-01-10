@@ -103,7 +103,7 @@ public class AddressServiceImpl implements AddressService {
         log.setAction(action);
         log.setEntityName("ADDRESS");
         log.setEntityId(entityId);
-        log.setPerformedBy(admin);
+        log.setUserId(admin.getUserId());
         log.setIpAddress(request.getRemoteAddr());
         log.setCreatedTime(LocalDateTime.now());
         auditLogRepository.save(log);

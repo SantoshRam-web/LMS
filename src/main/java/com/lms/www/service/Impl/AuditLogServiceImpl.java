@@ -33,7 +33,7 @@ public class AuditLogServiceImpl implements AuditLogService {
         log.setAction(action);
         log.setEntityName(entityName);
         log.setEntityId(entityId);
-        log.setPerformedBy(user);
+        log.setUserId(user.getUserId());
         log.setCreatedTime(LocalDateTime.now());
         log.setIpAddress(ipAddress);
 

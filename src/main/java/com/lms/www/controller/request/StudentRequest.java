@@ -2,8 +2,6 @@ package com.lms.www.controller.request;
 
 import java.time.LocalDate;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,8 +15,9 @@ public class StudentRequest {
     private String password;
     private String phone;
 
-    @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate dob;
+    // ✅ REQUIRED
+    private String roleName;
 
+    private LocalDate dob;
     private String gender;
 }

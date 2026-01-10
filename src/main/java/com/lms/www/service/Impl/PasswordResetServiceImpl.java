@@ -74,7 +74,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             log.setAction("PASSWORD_RESET");
             log.setEntityName("USER");
             log.setEntityId(user.getUserId());
-            log.setPerformedBy(user);
+            log.setUserId(user.getUserId());
             log.setCreatedTime(LocalDateTime.now());
             log.setIpAddress(ipAddress);
 
