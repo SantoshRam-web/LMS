@@ -25,7 +25,7 @@ public class FailedLoginAttempt {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id")
+    @Column(nullable = false)
     private Long userId;
 
     @Column(name = "attempt_time", nullable = false)

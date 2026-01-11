@@ -27,7 +27,10 @@ public class RolePermissionServiceImpl implements RolePermissionService {
     }
 
     @Override
-    public RolePermission assignPermissionToUser(Long userId, Long permissionId) {
+    public RolePermission assignPermissionToUser(
+            Long userId,
+            Long permissionId
+    ) {
 
         // ✅ Validate user exists
         userRepository.findById(userId)
@@ -37,9 +40,10 @@ public class RolePermissionServiceImpl implements RolePermissionService {
         Permission permission = permissionRepository.findById(permissionId)
                 .orElseThrow(() -> new RuntimeException("Permission not found"));
 
+        // ✅ Correct mapping (ID-based)
         RolePermission rp = new RolePermission();
-        rp.setUserId(userId);
-        rp.setPermission(permission);
+        rp.setUserId(userId);          // ✅ THIS IS CORRECT
+        rp.setPermission(permission);  // ✅ THIS IS CORRECT
 
         return rolePermissionRepository.save(rp);
     }

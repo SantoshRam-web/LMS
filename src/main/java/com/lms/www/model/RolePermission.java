@@ -1,6 +1,13 @@
 package com.lms.www.model;
 
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -12,8 +19,10 @@ public class RolePermission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "role_permission_id")
     private Long rolePermissionId;
 
+    // ✅ THIS IS REQUIRED — DO NOT REMOVE
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
@@ -21,4 +30,3 @@ public class RolePermission {
     @JoinColumn(name = "permission_id", nullable = false)
     private Permission permission;
 }
-

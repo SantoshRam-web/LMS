@@ -1,5 +1,10 @@
 package com.lms.www.service;
 
 public interface FailedLoginAttemptService {
-    void recordFailure(Long userId, String ipAddress);
+
+    void recordFailedAttempt(Long userId, String ipAddress);
+
+    long countRecentAttempts(Long userId, long minutes);
+
+    void clearAttempts(Long userId);
 }

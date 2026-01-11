@@ -10,7 +10,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
-import com.lms.www.model.Address;
 import com.lms.www.model.AuditLog;
 import com.lms.www.model.Instructor;
 import com.lms.www.model.Parent;
@@ -70,9 +69,7 @@ public class AdminServiceImpl implements AdminService {
         this.systemSettingsRepository = systemSettingsRepository;
     }
 
-    // =========================================================
-    // COMMON
-    // =========================================================
+    // ===================== COMMON =====================
     private User createBaseUser(
             String firstName,
             String lastName,
@@ -82,28 +79,21 @@ public class AdminServiceImpl implements AdminService {
             String roleName
     ) {
 
-        // 1️⃣ Password policy (default settings row = user_id = 0)
-        SystemSettings defaultSettings =
+        SystemSettings defaults =
                 systemSettingsRepository.findByUserId(0L)
                         .orElseThrow(() ->
                                 new RuntimeException("Default system settings missing"));
 
-        if (password.length() < defaultSettings.getPassLength()) {
+        if (password.length() < defaults.getPassLength()) {
             throw new RuntimeException(
-                    "Password must be at least "
-                            + defaultSettings.getPassLength()
-                            + " characters"
+                    "Password must be at least " + defaults.getPassLength() + " characters"
             );
         }
 
-        // 2️⃣ Email uniqueness
         if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException(
-                    "User already exists with email: " + email
-            );
+            throw new RuntimeException("User already exists with email: " + email);
         }
 
-        // 3️⃣ Create user
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -115,19 +105,17 @@ public class AdminServiceImpl implements AdminService {
 
         user = userRepository.save(user);
 
-        // 4️⃣ Create system_settings row for user
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
-        settings.setMaxLoginAttempts(defaultSettings.getMaxLoginAttempts());
-        settings.setAccLockDuration(defaultSettings.getAccLockDuration());
-        settings.setPassExpiryDays(defaultSettings.getPassExpiryDays());
-        settings.setPassLength(defaultSettings.getPassLength());
-        settings.setJwtExpiryMins(defaultSettings.getJwtExpiryMins());
-        settings.setSessionTimeout(defaultSettings.getSessionTimeout());
-        settings.setMultiSession(defaultSettings.getMultiSession());
-        settings.setEnableLoginAudit(defaultSettings.getEnableLoginAudit());
-        settings.setEnableAuditLog(defaultSettings.getEnableAuditLog());
-
+        settings.setMaxLoginAttempts(defaults.getMaxLoginAttempts());
+        settings.setAccLockDuration(defaults.getAccLockDuration());
+        settings.setPassExpiryDays(defaults.getPassExpiryDays());
+        settings.setPassLength(defaults.getPassLength());
+        settings.setJwtExpiryMins(defaults.getJwtExpiryMins());
+        settings.setSessionTimeout(defaults.getSessionTimeout());
+        settings.setMultiSession(defaults.getMultiSession());
+        settings.setEnableLoginAudit(defaults.getEnableLoginAudit());
+        settings.setEnableAuditLog(defaults.getEnableAuditLog());
         systemSettingsRepository.save(settings);
 
         return user;
@@ -147,20 +135,12 @@ public class AdminServiceImpl implements AdminService {
         log.setUserId(admin.getUserId());
         log.setCreatedTime(LocalDateTime.now());
         log.setIpAddress(request.getRemoteAddr());
-
         auditLogRepository.save(log);
     }
 
-    // =========================================================
-    // CREATE
-    // =========================================================
+    // ===================== CREATE =====================
     @Override
-    public void createStudent(
-            StudentRequest request,
-            User admin,
-            HttpServletRequest httpRequest
-    ) {
-
+    public void createStudent(StudentRequest request, User admin, HttpServletRequest httpRequest) {
         User user = createBaseUser(
                 request.getFirstName(),
                 request.getLastName(),
@@ -181,12 +161,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void createInstructor(
-            InstructorRequest request,
-            User admin,
-            HttpServletRequest httpRequest
-    ) {
-
+    public void createInstructor(InstructorRequest request, User admin, HttpServletRequest httpRequest) {
         User user = createBaseUser(
                 request.getFirstName(),
                 request.getLastName(),
@@ -205,12 +180,7 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void createParent(
-            ParentRequest request,
-            User admin,
-            HttpServletRequest httpRequest
-    ) {
-
+    public void createParent(ParentRequest request, User admin, HttpServletRequest httpRequest) {
         User user = createBaseUser(
                 request.getFirstName(),
                 request.getLastName(),
@@ -228,79 +198,86 @@ public class AdminServiceImpl implements AdminService {
         emailService.sendRegistrationMail(user, user.getRoleName());
     }
 
-    // =========================================================
-    // READ
-    // =========================================================
-    @Override
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    // ===================== READ =====================
+    @Override public List<User> getAllUsers() { return userRepository.findAll(); }
+
+    @Override public User getUserByUserId(Long userId) {
+        return userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    @Override
-    public User getUserByUserId(Long userId) {
-        return userRepository.findById(userId)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+    @Override public User getUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    @Override
-    public User getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
-    }
-
-    @Override
-    public List<Student> getAllStudents() {
-        return studentRepository.findAll();
-    }
-
-    @Override
-    public List<Parent> getAllParents() {
-        return parentRepository.findAll();
-    }
-
-    @Override
-    public List<Instructor> getAllInstructors() {
-        return instructorRepository.findAll();
-    }
+    @Override public List<Student> getAllStudents() { return studentRepository.findAll(); }
+    @Override public List<Parent> getAllParents() { return parentRepository.findAll(); }
+    @Override public List<Instructor> getAllInstructors() { return instructorRepository.findAll(); }
 
     @Override
     public Student getStudentByStudentId(Long studentId) {
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() ->
-                        new RuntimeException("Student not found"));
-
+                .orElseThrow(() -> new RuntimeException("Student not found"));
         parentStudentRelationRepository.findByStudent(student)
-                .forEach(r ->
-                        r.getParent().getUser().getEmail());
-
+                .forEach(r -> r.getParent().getUser().getEmail());
         return student;
     }
 
     @Override
     public Parent getParentByParentId(Long parentId) {
         Parent parent = parentRepository.findById(parentId)
-                .orElseThrow(() ->
-                        new RuntimeException("Parent not found"));
-
+                .orElseThrow(() -> new RuntimeException("Parent not found"));
         parentStudentRelationRepository.findByParent(parent)
-                .forEach(r ->
-                        r.getStudent().getUser().getEmail());
-
+                .forEach(r -> r.getStudent().getUser().getEmail());
         return parent;
     }
 
     @Override
     public Instructor getInstructorByInstructorId(Long instructorId) {
         return instructorRepository.findById(instructorId)
-                .orElseThrow(() ->
-                        new RuntimeException("Instructor not found"));
+                .orElseThrow(() -> new RuntimeException("Instructor not found"));
     }
 
-    // =========================================================
-    // MAP
-    // =========================================================
+    // ===================== UPDATE / DELETE =====================
+    @Override
+    public void updateUser(Long userId, User updatedUser, User admin, HttpServletRequest request) {
+        User existing = getUserByUserId(userId);
+
+        if (updatedUser.getFirstName() != null) existing.setFirstName(updatedUser.getFirstName());
+        if (updatedUser.getLastName() != null) existing.setLastName(updatedUser.getLastName());
+        if (updatedUser.getPhone() != null) existing.setPhone(updatedUser.getPhone());
+
+        userRepository.save(existing);
+        audit("UPDATE", "USER", userId, admin, request);
+    }
+
+    @Override
+    public void deleteUser(Long userId, User admin, HttpServletRequest request) {
+        User user = getUserByUserId(userId);
+
+        loginHistoryRepository.deleteByUser(user);
+        systemSettingsRepository.findByUserId(userId)
+                .ifPresent(systemSettingsRepository::delete);
+
+        studentRepository.findByUser(user).forEach(studentRepository::delete);
+        instructorRepository.findByUser(user).forEach(instructorRepository::delete);
+        parentRepository.findAll()
+                .stream()
+                .filter(p -> p.getUser().getUserId().equals(userId))
+                .forEach(parentRepository::delete);
+
+        userRepository.delete(user);
+        audit("DELETE", "USER", userId, admin, request);
+    }
+
+    @Override
+    public void setUserEnabled(Long userId, boolean enabled, User admin, HttpServletRequest request) {
+        User user = getUserByUserId(userId);
+        user.setEnabled(enabled);
+        userRepository.save(user);
+        audit(enabled ? "ENABLE" : "DISABLE", "USER", userId, admin, request);
+      
+    }
+    
     @Override
     public void mapParentToStudent(
             Long parentId,
@@ -310,99 +287,26 @@ public class AdminServiceImpl implements AdminService {
     ) {
 
         Parent parent = parentRepository.findById(parentId)
-                .orElseThrow(() ->
-                        new RuntimeException("Parent not found"));
+                .orElseThrow(() -> new RuntimeException("Parent not found"));
 
         Student student = studentRepository.findById(studentId)
-                .orElseThrow(() ->
-                        new RuntimeException("Student not found"));
+                .orElseThrow(() -> new RuntimeException("Student not found"));
 
-        ParentStudentRelation rel = new ParentStudentRelation();
-        rel.setParent(parent);
-        rel.setStudent(student);
+        ParentStudentRelation relation = new ParentStudentRelation();
+        relation.setParent(parent);
+        relation.setStudent(student);
 
-        parentStudentRelationRepository.save(rel);
-        audit("MAP", "PARENT_STUDENT", rel.getRelId(), admin, request);
+        parentStudentRelationRepository.save(relation);
+
+        AuditLog log = new AuditLog();
+        log.setAction("MAP");
+        log.setEntityName("PARENT_STUDENT");
+        log.setEntityId(relation.getRelId());
+        log.setUserId(admin.getUserId());
+        log.setCreatedTime(LocalDateTime.now());
+        log.setIpAddress(request.getRemoteAddr());
+
+        auditLogRepository.save(log);
     }
 
-    // =========================================================
-    // UPDATE / DELETE / ENABLE
-    // =========================================================
-    @Override
-    public void updateUser(
-            Long userId,
-            User updatedUser,
-            User admin,
-            HttpServletRequest request
-    ) {
-
-        User existing = getUserByUserId(userId);
-
-        if (updatedUser.getFirstName() != null)
-            existing.setFirstName(updatedUser.getFirstName());
-
-        if (updatedUser.getLastName() != null)
-            existing.setLastName(updatedUser.getLastName());
-
-        if (updatedUser.getPhone() != null)
-            existing.setPhone(updatedUser.getPhone());
-
-        userRepository.save(existing);
-        audit("UPDATE", "USER", userId, admin, request);
-    }
-
-    @Override
-    public void deleteUser(
-            Long userId,
-            User admin,
-            HttpServletRequest request
-    ) {
-
-        User user = getUserByUserId(userId);
-
-        loginHistoryRepository.deleteByUser(user);
-        studentRepository.findByUser(user)
-                .forEach(studentRepository::delete);
-        instructorRepository.findByUser(user)
-                .forEach(instructorRepository::delete);
-        parentRepository.findAll()
-                .stream()
-                .filter(p ->
-                        p.getUser().getUserId().equals(userId))
-                .forEach(parentRepository::delete);
-
-        userRepository.delete(user);
-        audit("DELETE", "USER", userId, admin, request);
-    }
-
-    @Override
-    public void setUserEnabled(
-            Long userId,
-            boolean enabled,
-            User admin,
-            HttpServletRequest request
-    ) {
-
-        User user = getUserByUserId(userId);
-        user.setEnabled(enabled);
-        userRepository.save(user);
-
-        audit(enabled ? "ENABLE" : "DISABLE",
-                "USER",
-                userId,
-                admin,
-                request);
-    }
-
-	@Override
-	public Address getAddressByEmail(String email) {
-		// TODO Auto-generated method stub
-		return null;
-	}
-
-	@Override
-	public Address updateAddress(Long userId, Address address, User admin, HttpServletRequest request) {
-		// TODO Auto-generated method stub
-		return null;
-	}
 }
