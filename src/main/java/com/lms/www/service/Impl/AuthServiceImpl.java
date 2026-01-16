@@ -5,12 +5,15 @@ import java.util.List;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.config.JwtUtil;
+import com.lms.www.model.LoginHistory;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.model.UserSession;
+import com.lms.www.repository.LoginHistoryRepository;
 import com.lms.www.repository.RolePermissionRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
@@ -19,7 +22,7 @@ import com.lms.www.service.AuthService;
 import com.lms.www.service.FailedLoginAttemptService;
 
 @Service
-@Transactional
+@Transactional(noRollbackFor = RuntimeException.class)
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -29,6 +32,7 @@ public class AuthServiceImpl implements AuthService {
     private final FailedLoginAttemptService failedLoginAttemptService;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final LoginHistoryRepository loginHistoryRepository;
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -37,7 +41,8 @@ public class AuthServiceImpl implements AuthService {
             SystemSettingsRepository systemSettingsRepository,
             FailedLoginAttemptService failedLoginAttemptService,
             PasswordEncoder passwordEncoder,
-            JwtUtil jwtUtil
+            JwtUtil jwtUtil,
+            LoginHistoryRepository loginHistoryRepository
     ) {
         this.userRepository = userRepository;
         this.rolePermissionRepository = rolePermissionRepository;
@@ -46,6 +51,7 @@ public class AuthServiceImpl implements AuthService {
         this.failedLoginAttemptService = failedLoginAttemptService;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.loginHistoryRepository = loginHistoryRepository;
     }
 
     @Override
@@ -59,10 +65,27 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
+        // ⛔ DISABLED USER
+        if (Boolean.FALSE.equals(user.getEnabled())) {
+            throw new RuntimeException("User account is disabled");
+        }
+
         SystemSettings settings = systemSettingsRepository
                 .findByUserId(user.getUserId())
-                .orElseThrow(() ->
-                        new RuntimeException("System settings missing"));
+                .orElseThrow(() -> new RuntimeException("System settings missing"));
+
+        // 🔐 PASSWORD EXPIRY CHECK (CORE REQUIREMENT)
+        if (settings.getUpdateTime() != null && settings.getPassExpiryDays() != null) {
+
+            LocalDateTime expiryTime =
+                    settings.getUpdateTime().plusDays(settings.getPassExpiryDays());
+
+            if (LocalDateTime.now().isAfter(expiryTime)) {
+                throw new RuntimeException(
+                        "Password expired. Please reset your password."
+                );
+            }
+        }
 
         // 🔒 ACCOUNT LOCK CHECK
         long attempts =
@@ -81,13 +104,28 @@ public class AuthServiceImpl implements AuthService {
 
         // ❌ WRONG PASSWORD
         if (!passwordEncoder.matches(password, user.getPassword())) {
+            settings.setEnableLoginAudit(false);
+            systemSettingsRepository.save(settings);
+
             failedLoginAttemptService
                     .recordFailedAttempt(user.getUserId(), ipAddress);
+
             throw new RuntimeException("Invalid credentials");
         }
 
-        // ✅ SUCCESS
+        // ✅ LOGIN SUCCESS
         failedLoginAttemptService.clearAttempts(user.getUserId());
+
+        settings.setEnableLoginAudit(true);
+        systemSettingsRepository.save(settings);
+
+        // ✅ LOGIN HISTORY
+        LoginHistory history = new LoginHistory();
+        history.setUser(user);
+        history.setIpAddress(ipAddress);
+        history.setDevice("PostmanRuntime");
+        history.setLoginTime(LocalDateTime.now());
+        loginHistoryRepository.save(history);
 
         List<String> permissions =
                 rolePermissionRepository.findByUserId(user.getUserId())
@@ -95,8 +133,6 @@ public class AuthServiceImpl implements AuthService {
                         .map(rp -> rp.getPermission().getPermissionName())
                         .distinct()
                         .toList();
-
-
 
         String token = jwtUtil.generateToken(
                 user.getUserId(),
@@ -113,4 +149,13 @@ public class AuthServiceImpl implements AuthService {
 
         return token;
     }
+
+
+    
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markLoginFailure(SystemSettings settings) {
+        settings.setEnableLoginAudit(false);
+        systemSettingsRepository.save(settings);
+    }
+
 }

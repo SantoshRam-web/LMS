@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.transaction.annotation.Propagation;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
@@ -79,21 +79,25 @@ public class AdminServiceImpl implements AdminService {
             String roleName
     ) {
 
-        SystemSettings defaults =
-                systemSettingsRepository.findByUserId(0L)
-                        .orElseThrow(() ->
-                                new RuntimeException("Default system settings missing"));
-
-        if (password.length() < defaults.getPassLength()) {
-            throw new RuntimeException(
-                    "Password must be at least " + defaults.getPassLength() + " characters"
-            );
-        }
-
+        // -----------------------------
+        // EMAIL CHECK
+        // -----------------------------
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("User already exists with email: " + email);
         }
 
+        // -----------------------------
+        // PASSWORD LENGTH CHECK (FIXED)
+        // -----------------------------
+        if (password.length() < 10) {
+            throw new RuntimeException(
+                    "Password must be at least 10 characters"
+            );
+        }
+
+        // -----------------------------
+        // CREATE & SAVE USER FIRST
+        // -----------------------------
         User user = new User();
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -103,23 +107,28 @@ public class AdminServiceImpl implements AdminService {
         user.setEnabled(true);
         user.setRoleName(roleName);
 
-        user = userRepository.save(user);
+        user = userRepository.save(user); // ✅ REQUIRED BEFORE SYSTEM_SETTINGS
 
+        // -----------------------------
+        // CREATE SYSTEM SETTINGS (PER USER)
+        // -----------------------------
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
-        settings.setMaxLoginAttempts(defaults.getMaxLoginAttempts());
-        settings.setAccLockDuration(defaults.getAccLockDuration());
-        settings.setPassExpiryDays(defaults.getPassExpiryDays());
-        settings.setPassLength(defaults.getPassLength());
-        settings.setJwtExpiryMins(defaults.getJwtExpiryMins());
-        settings.setSessionTimeout(defaults.getSessionTimeout());
-        settings.setMultiSession(defaults.getMultiSession());
-        settings.setEnableLoginAudit(defaults.getEnableLoginAudit());
-        settings.setEnableAuditLog(defaults.getEnableAuditLog());
+        settings.setMaxLoginAttempts(5L);
+        settings.setAccLockDuration(30L);
+        settings.setPassExpiryDays(60L);
+        settings.setPassLength(10L);
+        settings.setJwtExpiryMins(60L);
+        settings.setSessionTimeout(60L);
+        settings.setMultiSession(false);
+        settings.setEnableLoginAudit(null);
+        settings.setEnableAuditLog(null);
+
         systemSettingsRepository.save(settings);
 
         return user;
     }
+
 
     private void audit(
             String action,
@@ -141,7 +150,8 @@ public class AdminServiceImpl implements AdminService {
     // ===================== CREATE =====================
     @Override
     public void createStudent(StudentRequest request, User admin, HttpServletRequest httpRequest) {
-        User user = createBaseUser(
+       try {
+    	User user = createBaseUser(
                 request.getFirstName(),
                 request.getLastName(),
                 request.getEmail(),
@@ -157,12 +167,22 @@ public class AdminServiceImpl implements AdminService {
         studentRepository.save(student);
 
         audit("CREATE", "STUDENT", user.getUserId(), admin, httpRequest);
+        markAuditStatus(admin.getUserId(), true);
         emailService.sendRegistrationMail(user, user.getRoleName());
+        
+       } catch (RuntimeException ex) {
+
+           // ❌ FAILURE
+           markAuditStatus(admin.getUserId(), false);
+
+           throw ex;
+       }
     }
 
     @Override
     public void createInstructor(InstructorRequest request, User admin, HttpServletRequest httpRequest) {
-        User user = createBaseUser(
+        try {
+    	User user = createBaseUser(
                 request.getFirstName(),
                 request.getLastName(),
                 request.getEmail(),
@@ -176,12 +196,25 @@ public class AdminServiceImpl implements AdminService {
         instructorRepository.save(instructor);
 
         audit("CREATE", "INSTRUCTOR", user.getUserId(), admin, httpRequest);
+        
+        // ✅ SUCCESS
+        markAuditStatus(admin.getUserId(), true);
+        
         emailService.sendRegistrationMail(user, user.getRoleName());
+        
+        }catch (RuntimeException ex) {
+
+            // ❌ FAILURE
+            markAuditStatus(admin.getUserId(), false);
+
+            throw ex;
+        }
     }
 
     @Override
     public void createParent(ParentRequest request, User admin, HttpServletRequest httpRequest) {
-        User user = createBaseUser(
+        try {
+    	User user = createBaseUser(
                 request.getFirstName(),
                 request.getLastName(),
                 request.getEmail(),
@@ -195,7 +228,19 @@ public class AdminServiceImpl implements AdminService {
         parentRepository.save(parent);
 
         audit("CREATE", "PARENT", user.getUserId(), admin, httpRequest);
+        
+        // ✅ SUCCESS
+        markAuditStatus(admin.getUserId(), true);
+        
         emailService.sendRegistrationMail(user, user.getRoleName());
+        
+        } catch (RuntimeException ex) {
+
+            // ❌ FAILURE
+            markAuditStatus(admin.getUserId(), false);
+
+            throw ex;
+        }
     }
 
     // ===================== READ =====================
@@ -240,7 +285,8 @@ public class AdminServiceImpl implements AdminService {
     // ===================== UPDATE / DELETE =====================
     @Override
     public void updateUser(Long userId, User updatedUser, User admin, HttpServletRequest request) {
-        User existing = getUserByUserId(userId);
+        try {
+    	User existing = getUserByUserId(userId);
 
         if (updatedUser.getFirstName() != null) existing.setFirstName(updatedUser.getFirstName());
         if (updatedUser.getLastName() != null) existing.setLastName(updatedUser.getLastName());
@@ -248,11 +294,23 @@ public class AdminServiceImpl implements AdminService {
 
         userRepository.save(existing);
         audit("UPDATE", "USER", userId, admin, request);
+        
+        // ✅ SUCCESS
+        markAuditStatus(admin.getUserId(), true);
+        
+        } catch (RuntimeException ex) {
+
+            // ❌ FAILURE
+            markAuditStatus(admin.getUserId(), false);
+
+            throw ex;
+        }
     }
 
     @Override
     public void deleteUser(Long userId, User admin, HttpServletRequest request) {
-        User user = getUserByUserId(userId);
+        try {
+    	User user = getUserByUserId(userId);
 
         loginHistoryRepository.deleteByUser(user);
         systemSettingsRepository.findByUserId(userId)
@@ -267,14 +325,37 @@ public class AdminServiceImpl implements AdminService {
 
         userRepository.delete(user);
         audit("DELETE", "USER", userId, admin, request);
+        
+     // ✅ SUCCESS
+        markAuditStatus(admin.getUserId(), true);
+       
+        } catch (RuntimeException ex) {
+
+            // ❌ FAILURE
+            markAuditStatus(admin.getUserId(), false);
+
+            throw ex;
+        }
     }
 
     @Override
     public void setUserEnabled(Long userId, boolean enabled, User admin, HttpServletRequest request) {
+        try{
         User user = getUserByUserId(userId);
         user.setEnabled(enabled);
         userRepository.save(user);
         audit(enabled ? "ENABLE" : "DISABLE", "USER", userId, admin, request);
+        // ✅ SUCCESS
+        markAuditStatus(admin.getUserId(), true);
+        
+        }catch (RuntimeException ex) {
+
+            // ❌ FAILURE
+            markAuditStatus(admin.getUserId(), false);
+
+            throw ex;
+        }
+        
       
     }
     
@@ -286,7 +367,8 @@ public class AdminServiceImpl implements AdminService {
             HttpServletRequest request
     ) {
 
-        Parent parent = parentRepository.findById(parentId)
+       try {
+       Parent parent = parentRepository.findById(parentId)
                 .orElseThrow(() -> new RuntimeException("Parent not found"));
 
         Student student = studentRepository.findById(studentId)
@@ -307,6 +389,26 @@ public class AdminServiceImpl implements AdminService {
         log.setIpAddress(request.getRemoteAddr());
 
         auditLogRepository.save(log);
+        
+        // ✅ SUCCESS
+        markAuditStatus(admin.getUserId(), true);
+        
+       }catch (RuntimeException ex) {
+
+           // ❌ FAILURE
+           markAuditStatus(admin.getUserId(), false);
+
+           throw ex;
+       }
+    }
+    
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markAuditStatus(Long userId, Boolean status) {
+        systemSettingsRepository.findByUserId(userId)
+                .ifPresent(settings -> {
+                    settings.setEnableAuditLog(status);
+                    systemSettingsRepository.save(settings);
+                });
     }
 
 }

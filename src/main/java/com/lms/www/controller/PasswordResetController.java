@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.*;
 import com.lms.www.service.PasswordResetService;
 
 import jakarta.servlet.http.HttpServletRequest;
-
 @RestController
 @RequestMapping("/auth")
 public class PasswordResetController {
@@ -19,16 +18,29 @@ public class PasswordResetController {
 
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(
-            @RequestParam Long userId,
-            @RequestParam String newPassword,
-            HttpServletRequest request
+            @RequestBody ResetPasswordRequest request,
+            HttpServletRequest httpRequest
     ) {
         passwordResetService.resetPassword(
-                userId,
-                newPassword,
-                request.getRemoteAddr()
+                request.getUserId(),
+                request.getNewPassword(),
+                httpRequest.getRemoteAddr()
         );
         return ResponseEntity.ok("Password reset successful");
     }
+
+    static class ResetPasswordRequest {
+        private Long userId;
+        private String newPassword;
+
+        public Long getUserId() {
+            return userId;
+        }
+
+        public String getNewPassword() {
+            return newPassword;
+        }
+    }
 }
+
 

@@ -1,5 +1,7 @@
 package com.lms.www.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -49,7 +51,8 @@ public class SystemSettings {
 
     @Column(name = "enable_audit_log")
     private Boolean enableAuditLog;
+    
+    @Column(name = "update_time", insertable = false, updatable = false)
+    private LocalDateTime updateTime;
 
-    @Column(name = "default_user_role")
-    private String defaultUserRole;
 }

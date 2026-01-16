@@ -42,6 +42,9 @@ public class SecurityConfig {
 
                 // 🔐 SELF PROFILE
                 .requestMatchers("/me/**").authenticated()
+                
+                .requestMatchers("/auth/login").permitAll()
+                .requestMatchers("/auth/reset-password").permitAll()
 
                 .anyRequest().authenticated()
             )
