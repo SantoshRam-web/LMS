@@ -74,11 +74,13 @@ public class AuthServiceImpl implements AuthService {
                 .findByUserId(user.getUserId())
                 .orElseThrow(() -> new RuntimeException("System settings missing"));
 
-        // 🔐 PASSWORD EXPIRY CHECK (CORE REQUIREMENT)
-        if (settings.getUpdateTime() != null && settings.getPassExpiryDays() != null) {
+        // 🔐 PASSWORD EXPIRY CHECK
+        if (settings.getPasswordLastUpdatedAt() != null
+                && settings.getPassExpiryDays() != null) {
 
             LocalDateTime expiryTime =
-                    settings.getUpdateTime().plusDays(settings.getPassExpiryDays());
+                    settings.getPasswordLastUpdatedAt()
+                    .plusDays(settings.getPassExpiryDays());
 
             if (LocalDateTime.now().isAfter(expiryTime)) {
                 throw new RuntimeException(
@@ -86,6 +88,7 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
         }
+
 
         // 🔒 ACCOUNT LOCK CHECK
         long attempts =
@@ -112,6 +115,8 @@ public class AuthServiceImpl implements AuthService {
 
             throw new RuntimeException("Invalid credentials");
         }
+        
+        
 
         // ✅ LOGIN SUCCESS
         failedLoginAttemptService.clearAttempts(user.getUserId());
@@ -128,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
         loginHistoryRepository.save(history);
 
         List<String> permissions =
-                rolePermissionRepository.findByUserId(user.getUserId())
+        		rolePermissionRepository.findByRoleName(user.getRoleName())
                         .stream()
                         .map(rp -> rp.getPermission().getPermissionName())
                         .distinct()

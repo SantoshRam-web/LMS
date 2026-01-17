@@ -22,9 +22,8 @@ public class RolePermission {
     @Column(name = "role_permission_id")
     private Long rolePermissionId;
 
-    // ✅ THIS IS REQUIRED — DO NOT REMOVE
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @Column(name = "role_name", nullable = false)
+    private String roleName;
 
     @ManyToOne
     @JoinColumn(name = "permission_id", nullable = false)

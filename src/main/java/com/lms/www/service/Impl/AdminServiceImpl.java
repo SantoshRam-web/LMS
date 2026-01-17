@@ -109,9 +109,6 @@ public class AdminServiceImpl implements AdminService {
 
         user = userRepository.save(user); // ✅ REQUIRED BEFORE SYSTEM_SETTINGS
 
-        // -----------------------------
-        // CREATE SYSTEM SETTINGS (PER USER)
-        // -----------------------------
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
         settings.setMaxLoginAttempts(5L);
@@ -124,7 +121,12 @@ public class AdminServiceImpl implements AdminService {
         settings.setEnableLoginAudit(null);
         settings.setEnableAuditLog(null);
 
+        // 🔑 IMPORTANT
+        settings.setPasswordLastUpdatedAt(LocalDateTime.now());
+        settings.setUpdatedTime(LocalDateTime.now());
+
         systemSettingsRepository.save(settings);
+
 
         return user;
     }
@@ -165,9 +167,11 @@ public class AdminServiceImpl implements AdminService {
         student.setDob(request.getDob());
         student.setGender(request.getGender());
         studentRepository.save(student);
-
-        audit("CREATE", "STUDENT", user.getUserId(), admin, httpRequest);
+        
         markAuditStatus(admin.getUserId(), true);
+        
+        audit("CREATE", "STUDENT", user.getUserId(), admin, httpRequest);
+   
         emailService.sendRegistrationMail(user, user.getRoleName());
         
        } catch (RuntimeException ex) {
@@ -194,11 +198,12 @@ public class AdminServiceImpl implements AdminService {
         Instructor instructor = new Instructor();
         instructor.setUser(user);
         instructorRepository.save(instructor);
-
-        audit("CREATE", "INSTRUCTOR", user.getUserId(), admin, httpRequest);
         
         // ✅ SUCCESS
         markAuditStatus(admin.getUserId(), true);
+        
+        audit("CREATE", "INSTRUCTOR", user.getUserId(), admin, httpRequest);
+      
         
         emailService.sendRegistrationMail(user, user.getRoleName());
         
@@ -226,11 +231,12 @@ public class AdminServiceImpl implements AdminService {
         Parent parent = new Parent();
         parent.setUser(user);
         parentRepository.save(parent);
-
-        audit("CREATE", "PARENT", user.getUserId(), admin, httpRequest);
         
         // ✅ SUCCESS
         markAuditStatus(admin.getUserId(), true);
+        
+        audit("CREATE", "PARENT", user.getUserId(), admin, httpRequest);
+        
         
         emailService.sendRegistrationMail(user, user.getRoleName());
         
@@ -293,10 +299,11 @@ public class AdminServiceImpl implements AdminService {
         if (updatedUser.getPhone() != null) existing.setPhone(updatedUser.getPhone());
 
         userRepository.save(existing);
-        audit("UPDATE", "USER", userId, admin, request);
         
         // ✅ SUCCESS
         markAuditStatus(admin.getUserId(), true);
+        
+        audit("UPDATE", "USER", userId, admin, request);
         
         } catch (RuntimeException ex) {
 
@@ -324,10 +331,11 @@ public class AdminServiceImpl implements AdminService {
                 .forEach(parentRepository::delete);
 
         userRepository.delete(user);
-        audit("DELETE", "USER", userId, admin, request);
         
-     // ✅ SUCCESS
+         // ✅ SUCCESS
         markAuditStatus(admin.getUserId(), true);
+        
+        audit("DELETE", "USER", userId, admin, request);
        
         } catch (RuntimeException ex) {
 
@@ -344,9 +352,11 @@ public class AdminServiceImpl implements AdminService {
         User user = getUserByUserId(userId);
         user.setEnabled(enabled);
         userRepository.save(user);
-        audit(enabled ? "ENABLE" : "DISABLE", "USER", userId, admin, request);
+        
         // ✅ SUCCESS
         markAuditStatus(admin.getUserId(), true);
+        
+        audit(enabled ? "ENABLE" : "DISABLE", "USER", userId, admin, request);
         
         }catch (RuntimeException ex) {
 
@@ -387,11 +397,11 @@ public class AdminServiceImpl implements AdminService {
         log.setUserId(admin.getUserId());
         log.setCreatedTime(LocalDateTime.now());
         log.setIpAddress(request.getRemoteAddr());
-
-        auditLogRepository.save(log);
         
         // ✅ SUCCESS
         markAuditStatus(admin.getUserId(), true);
+        
+        auditLogRepository.save(log);
         
        }catch (RuntimeException ex) {
 
@@ -404,11 +414,16 @@ public class AdminServiceImpl implements AdminService {
     
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markAuditStatus(Long userId, Boolean status) {
-        systemSettingsRepository.findByUserId(userId)
-                .ifPresent(settings -> {
-                    settings.setEnableAuditLog(status);
-                    systemSettingsRepository.save(settings);
-                });
+
+        SystemSettings settings = systemSettingsRepository
+                .findByUserId(userId)
+                .orElse(null);
+
+        if (settings != null) {
+            settings.setEnableAuditLog(status);
+            systemSettingsRepository.save(settings);
+        }
     }
+
 
 }

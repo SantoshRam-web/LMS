@@ -43,40 +43,41 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     @Override
     public void resetPassword(Long userId, String newPassword, String ipAddress) {
 
-        SystemSettings settings = systemSettingsRepository
-                .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("System settings not found"));
+        try {
+            SystemSettings settings = systemSettingsRepository
+                    .findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("System settings not found"));
 
-        if (newPassword.length() < settings.getPassLength()) {
-            throw new RuntimeException(
-                    "Password must be at least " + settings.getPassLength() + " characters"
-            );
-        }
+            if (newPassword.length() < settings.getPassLength()) {
+                throw new RuntimeException(
+                        "Password must be at least " + settings.getPassLength() + " characters"
+                );
+            }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // 🔐 update password
-        user.setPassword(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
+            // 🔐 update password
+            user.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(user);
 
-        // ⏱ reset password expiry timer
-        settings.setUpdateTime(LocalDateTime.now());
-        systemSettingsRepository.save(settings);
+            // 🔑 RESET PASSWORD TIMER
+            settings.setPasswordLastUpdatedAt(LocalDateTime.now());
+            settings.setUpdatedTime(LocalDateTime.now());
+            systemSettingsRepository.save(settings);
 
-        // 🧾 ensure token history exists (FIXED)
-        passwordResetTokenRepository
-                .findByUser(user)
-                .orElseGet(() -> {
-                    PasswordResetTokens t = new PasswordResetTokens();
-                    t.setUser(user);
-                    t.setResetToken("MANUAL_RESET_" + System.currentTimeMillis());
-                    t.setCreatedTime(LocalDateTime.now()); // ✅ REQUIRED
-                    return passwordResetTokenRepository.save(t);
-                });
+            // 🧾 Password reset token history (REQUIRED)
+            PasswordResetTokens token = new PasswordResetTokens();
+            token.setUser(user);
+            token.setResetToken("MANUAL_RESET_" + System.currentTimeMillis());
+            token.setCreatedTime(LocalDateTime.now());
+            passwordResetTokenRepository.save(token);
 
-        // 📝 audit (only if enabled)
-        if (Boolean.TRUE.equals(settings.getEnableAuditLog())) {
+            // ✅ SUCCESS → update audit flag FIRST
+            settings.setEnableAuditLog(true);
+            systemSettingsRepository.save(settings);
+
+            // ✅ THEN write audit log
             AuditLog log = new AuditLog();
             log.setAction("PASSWORD_RESET");
             log.setEntityName("USER");
@@ -84,9 +85,18 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             log.setUserId(user.getUserId());
             log.setCreatedTime(LocalDateTime.now());
             log.setIpAddress(ipAddress);
-
             auditLogRepository.save(log);
+
+        } catch (RuntimeException ex) {
+
+            // ❌ FAILURE → update audit flag ONLY
+            systemSettingsRepository.findByUserId(userId)
+                    .ifPresent(settings -> {
+                        settings.setEnableAuditLog(false);
+                        systemSettingsRepository.save(settings);
+                    });
+
+            throw ex;
         }
     }
-
 }

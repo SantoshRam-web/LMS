@@ -9,5 +9,5 @@ import com.lms.www.model.RolePermission;
 public interface RolePermissionRepository
 extends JpaRepository<RolePermission, Long> {
 
-List<RolePermission> findByUserId(Long userId); // ✅ ONLY THIS
+List<RolePermission> findByRoleName(String roleName);
 }

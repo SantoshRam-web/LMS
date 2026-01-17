@@ -25,6 +25,7 @@ public class SystemSettings {
     @Column(name = "user_id", nullable = false, unique = true)
     private Long userId;
 
+    // ---------- SECURITY ----------
     @Column(name = "max_login_attempts", nullable = false)
     private Long maxLoginAttempts;
 
@@ -37,6 +38,10 @@ public class SystemSettings {
     @Column(name = "pass_length", nullable = false)
     private Long passLength;
 
+    @Column(name = "password_last_updated_at", nullable = false)
+    private LocalDateTime passwordLastUpdatedAt;
+
+    // ---------- SESSION ----------
     @Column(name = "jwt_expiry_mins")
     private Long jwtExpiryMins;
 
@@ -46,13 +51,15 @@ public class SystemSettings {
     @Column(name = "multi_session")
     private Boolean multiSession;
 
+    // ---------- AUDIT FLAGS ----------
     @Column(name = "enable_login_audit")
     private Boolean enableLoginAudit;
 
     @Column(name = "enable_audit_log")
     private Boolean enableAuditLog;
-    
-    @Column(name = "update_time", insertable = false, updatable = false)
-    private LocalDateTime updateTime;
 
+    // ---------- META ----------
+    @Column(name = "updated_time")
+    private LocalDateTime updatedTime;
 }
+
