@@ -1,5 +1,7 @@
 package com.lms.www.controller;
 
+import java.time.LocalDateTime;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -11,6 +13,7 @@ import com.lms.www.model.User;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.service.AuthService;
+import com.lms.www.service.EmailService;
 import com.lms.www.service.UserSessionService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,6 +27,8 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final SystemSettingsRepository systemSettingsRepository;
+    private final EmailService emailService;
+
 
 
     public AuthController(
@@ -31,13 +36,15 @@ public class AuthController {
             UserSessionService userSessionService,
             JwtUtil jwtUtil,
             UserRepository userRepository,
-            SystemSettingsRepository systemSettingsRepository
+            SystemSettingsRepository systemSettingsRepository,
+            EmailService emailService
     ) {
         this.authService = authService;
         this.userSessionService = userSessionService;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.systemSettingsRepository = systemSettingsRepository;
+        this.emailService  = emailService;
     }
 
 
@@ -81,6 +88,13 @@ public class AuthController {
                 });
 
         userSessionService.logout(token);
+        
+        emailService.sendLoginSuccessMail(
+        	    user,
+        	    request.getRemoteAddr(),
+        	    LocalDateTime.now()
+        	);
+
 
         return ResponseEntity.ok("Logged out successfully");
     }

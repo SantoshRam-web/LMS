@@ -17,4 +17,7 @@ public interface AuditLogRepository
 	        Long entityId,
 	        String action
 	);
+	
+	void deleteByUserId(Long userId);
+
 }

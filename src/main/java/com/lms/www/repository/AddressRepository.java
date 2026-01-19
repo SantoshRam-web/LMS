@@ -9,4 +9,6 @@ import com.lms.www.model.User;
 
 public interface AddressRepository extends JpaRepository<Address, Long> {
     Optional<Address> findByUser(User user);
+    
+    void deleteByUser_UserId(Long userId);
 }

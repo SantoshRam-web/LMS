@@ -19,6 +19,7 @@ import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.service.AuthService;
+import com.lms.www.service.EmailService;
 import com.lms.www.service.FailedLoginAttemptService;
 
 @Service
@@ -33,6 +34,8 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final LoginHistoryRepository loginHistoryRepository;
+    private final EmailService emailService;
+
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -42,7 +45,8 @@ public class AuthServiceImpl implements AuthService {
             FailedLoginAttemptService failedLoginAttemptService,
             PasswordEncoder passwordEncoder,
             JwtUtil jwtUtil,
-            LoginHistoryRepository loginHistoryRepository
+            LoginHistoryRepository loginHistoryRepository,
+            EmailService emailService
     ) {
         this.userRepository = userRepository;
         this.rolePermissionRepository = rolePermissionRepository;
@@ -52,6 +56,7 @@ public class AuthServiceImpl implements AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.loginHistoryRepository = loginHistoryRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -112,6 +117,12 @@ public class AuthServiceImpl implements AuthService {
 
             failedLoginAttemptService
                     .recordFailedAttempt(user.getUserId(), ipAddress);
+            
+            emailService.sendLoginFailedMail(
+            	    user.getEmail(),
+            	    ipAddress,
+            	    LocalDateTime.now()
+            	);
 
             throw new RuntimeException("Invalid credentials");
         }
@@ -131,6 +142,13 @@ public class AuthServiceImpl implements AuthService {
         history.setDevice("PostmanRuntime");
         history.setLoginTime(LocalDateTime.now());
         loginHistoryRepository.save(history);
+        
+        emailService.sendLoginSuccessMail(
+        	    user,
+        	    ipAddress,
+        	    LocalDateTime.now()
+        	);
+
 
         List<String> permissions =
         		rolePermissionRepository.findByRoleName(user.getRoleName())

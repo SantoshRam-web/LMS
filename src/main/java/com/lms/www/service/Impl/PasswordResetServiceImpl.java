@@ -2,8 +2,10 @@ package com.lms.www.service.Impl;
 
 import java.time.LocalDateTime;
 
+import org.springframework.context.ApplicationContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.model.AuditLog;
@@ -14,6 +16,7 @@ import com.lms.www.repository.AuditLogRepository;
 import com.lms.www.repository.PasswordResetTokenRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
+import com.lms.www.service.EmailService;
 import com.lms.www.service.PasswordResetService;
 
 @Service
@@ -25,29 +28,35 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     private final SystemSettingsRepository systemSettingsRepository;
     private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
+    private final ApplicationContext applicationContext;
+    private final EmailService emailService;
 
     public PasswordResetServiceImpl(
             UserRepository userRepository,
             PasswordResetTokenRepository passwordResetTokenRepository,
             SystemSettingsRepository systemSettingsRepository,
             AuditLogRepository auditLogRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            ApplicationContext applicationContext,
+            EmailService emailService
     ) {
         this.userRepository = userRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.systemSettingsRepository = systemSettingsRepository;
         this.auditLogRepository = auditLogRepository;
         this.passwordEncoder = passwordEncoder;
+        this.applicationContext = applicationContext;
+        this.emailService = emailService;
     }
 
     @Override
     public void resetPassword(Long userId, String newPassword, String ipAddress) {
 
-        try {
-            SystemSettings settings = systemSettingsRepository
-                    .findByUserId(userId)
-                    .orElseThrow(() -> new RuntimeException("System settings not found"));
+        SystemSettings settings = systemSettingsRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("System settings not found"));
 
+        try {
             if (newPassword.length() < settings.getPassLength()) {
                 throw new RuntimeException(
                         "Password must be at least " + settings.getPassLength() + " characters"
@@ -60,24 +69,27 @@ public class PasswordResetServiceImpl implements PasswordResetService {
             // 🔐 update password
             user.setPassword(passwordEncoder.encode(newPassword));
             userRepository.save(user);
+            
+            emailService.sendPasswordResetMail(user, LocalDateTime.now());
 
-            // 🔑 RESET PASSWORD TIMER
+
+            // 🔑 reset expiry timer
             settings.setPasswordLastUpdatedAt(LocalDateTime.now());
             settings.setUpdatedTime(LocalDateTime.now());
+            settings.setEnableAuditLog(true);   // ✅ SUCCESS
             systemSettingsRepository.save(settings);
 
-            // 🧾 Password reset token history (REQUIRED)
+            // 🧾 password reset token
             PasswordResetTokens token = new PasswordResetTokens();
             token.setUser(user);
             token.setResetToken("MANUAL_RESET_" + System.currentTimeMillis());
             token.setCreatedTime(LocalDateTime.now());
             passwordResetTokenRepository.save(token);
+            
+            emailService.sendRegistrationMail(user, "PASSWORD RESET");
 
-            // ✅ SUCCESS → update audit flag FIRST
-            settings.setEnableAuditLog(true);
-            systemSettingsRepository.save(settings);
 
-            // ✅ THEN write audit log
+            // ✅ audit log
             AuditLog log = new AuditLog();
             log.setAction("PASSWORD_RESET");
             log.setEntityName("USER");
@@ -89,14 +101,26 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         } catch (RuntimeException ex) {
 
-            // ❌ FAILURE → update audit flag ONLY
-            systemSettingsRepository.findByUserId(userId)
-                    .ifPresent(settings -> {
-                        settings.setEnableAuditLog(false);
-                        systemSettingsRepository.save(settings);
-                    });
+            // ❌ FAILURE — MUST COMMIT
+            proxy().markAuditFailure(userId);
 
             throw ex;
         }
+    }
+
+    // 🔴 FAILURE MUST RUN IN NEW TRANSACTION
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void markAuditFailure(Long userId) {
+
+        SystemSettings settings = systemSettingsRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("System settings not found"));
+
+        settings.setEnableAuditLog(false);
+        systemSettingsRepository.save(settings);
+    }
+
+    private PasswordResetServiceImpl proxy() {
+        return applicationContext.getBean(PasswordResetServiceImpl.class);
     }
 }

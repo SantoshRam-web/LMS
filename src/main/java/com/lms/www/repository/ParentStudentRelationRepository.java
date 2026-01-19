@@ -13,4 +13,9 @@ public interface ParentStudentRelationRepository
 
     List<ParentStudentRelation> findByParent(Parent parent);
     List<ParentStudentRelation> findByStudent(Student student);
+    
+    void deleteByStudent_User_UserId(Long userId);
+
+    void deleteByParent_User_UserId(Long userId);
+
 }
