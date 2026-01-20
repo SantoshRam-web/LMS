@@ -14,4 +14,6 @@ public interface UserSessionRepository
     
     Optional<UserSession> findTopByUserOrderByLoginTimeDesc(User user);
 
+    void deleteByUser_UserId(Long userId);
+
 }

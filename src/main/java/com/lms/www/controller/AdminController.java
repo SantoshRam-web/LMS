@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -211,7 +212,29 @@ public class AdminController {
         return ResponseEntity.ok("Address deleted successfully");
     }
 
+    
+    @PutMapping("/users/{userId}/multi-session")
+    public ResponseEntity<String> updateMultiSessionAccess(
+            @PathVariable Long userId,
+            @RequestBody MultiSessionRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.updateMultiSessionAccess(
+                userId,
+                request.isMultiSession(),
+                getLoggedInUser(),
+                httpRequest
+        );
+        return ResponseEntity.ok("Multi-session access updated");
+    }
 
+    static class MultiSessionRequest {
+        private boolean multiSession;
+
+        public boolean isMultiSession() {
+            return multiSession;
+        }
+    }
 
 
 

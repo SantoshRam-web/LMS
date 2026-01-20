@@ -36,7 +36,6 @@ public class AuthServiceImpl implements AuthService {
     private final LoginHistoryRepository loginHistoryRepository;
     private final EmailService emailService;
 
-
     public AuthServiceImpl(
             UserRepository userRepository,
             RolePermissionRepository rolePermissionRepository,
@@ -85,7 +84,7 @@ public class AuthServiceImpl implements AuthService {
 
             LocalDateTime expiryTime =
                     settings.getPasswordLastUpdatedAt()
-                    .plusDays(settings.getPassExpiryDays());
+                            .plusDays(settings.getPassExpiryDays());
 
             if (LocalDateTime.now().isAfter(expiryTime)) {
                 throw new RuntimeException(
@@ -93,7 +92,6 @@ public class AuthServiceImpl implements AuthService {
                 );
             }
         }
-
 
         // 🔒 ACCOUNT LOCK CHECK
         long attempts =
@@ -117,21 +115,33 @@ public class AuthServiceImpl implements AuthService {
 
             failedLoginAttemptService
                     .recordFailedAttempt(user.getUserId(), ipAddress);
-            
+
             emailService.sendLoginFailedMail(
-            	    user.getEmail(),
-            	    ipAddress,
-            	    LocalDateTime.now()
-            	);
+                    user.getEmail(),
+                    ipAddress,
+                    LocalDateTime.now()
+            );
 
             throw new RuntimeException("Invalid credentials");
         }
-        
-        
 
-        // ✅ LOGIN SUCCESS
+        // ✅ PASSWORD OK — CLEAR FAILURES
         failedLoginAttemptService.clearAttempts(user.getUserId());
 
+        // 🚫 STRICT MULTI-SESSION BLOCK
+        if (Boolean.FALSE.equals(settings.getMultiSession())) {
+            userSessionRepository
+                    .findTopByUserOrderByLoginTimeDesc(user)
+                    .ifPresent(existingSession -> {
+                        if (existingSession.getLogoutTime() == null) {
+                            throw new RuntimeException(
+                                    "User already has an active session. Multiple sessions are not allowed."
+                            );
+                        }
+                    });
+        }
+
+        // ✅ LOGIN AUDIT FLAG
         settings.setEnableLoginAudit(true);
         systemSettingsRepository.save(settings);
 
@@ -142,21 +152,22 @@ public class AuthServiceImpl implements AuthService {
         history.setDevice("PostmanRuntime");
         history.setLoginTime(LocalDateTime.now());
         loginHistoryRepository.save(history);
-        
+
         emailService.sendLoginSuccessMail(
-        	    user,
-        	    ipAddress,
-        	    LocalDateTime.now()
-        	);
+                user,
+                ipAddress,
+                LocalDateTime.now()
+        );
 
-
+        // ✅ PERMISSIONS
         List<String> permissions =
-        		rolePermissionRepository.findByRoleName(user.getRoleName())
+                rolePermissionRepository.findByRoleName(user.getRoleName())
                         .stream()
                         .map(rp -> rp.getPermission().getPermissionName())
                         .distinct()
                         .toList();
 
+        // ✅ TOKEN
         String token = jwtUtil.generateToken(
                 user.getUserId(),
                 user.getEmail(),
@@ -164,21 +175,20 @@ public class AuthServiceImpl implements AuthService {
                 permissions
         );
 
+        // ✅ SESSION
         UserSession session = new UserSession();
         session.setUser(user);
         session.setToken(token);
         session.setLoginTime(LocalDateTime.now());
+        session.setLastActivityTime(LocalDateTime.now());
         userSessionRepository.save(session);
 
         return token;
     }
 
-
-    
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markLoginFailure(SystemSettings settings) {
         settings.setEnableLoginAudit(false);
         systemSettingsRepository.save(settings);
     }
-
 }

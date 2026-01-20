@@ -29,10 +29,10 @@ import com.lms.www.repository.PasswordResetTokenRepository;
 import com.lms.www.repository.StudentRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
+import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.service.AdminService;
 import com.lms.www.service.EmailService;
 
-import jakarta.persistence.EntityManager;
 import jakarta.servlet.http.HttpServletRequest;
 
 @Service
@@ -51,8 +51,9 @@ public class AdminServiceImpl implements AdminService {
     private final SystemSettingsRepository systemSettingsRepository;
     private final ApplicationContext applicationContext;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
-    private final EntityManager entityManager;
     private final AddressRepository addressRepository;
+    private final UserSessionRepository userSessionRepository;
+
 
 
     public AdminServiceImpl(
@@ -68,8 +69,8 @@ public class AdminServiceImpl implements AdminService {
             SystemSettingsRepository systemSettingsRepository,
             PasswordResetTokenRepository passwordResetTokenRepository,
             ApplicationContext applicationContext,
-            EntityManager entityManager,
-            AddressRepository addressRepository
+            AddressRepository addressRepository,
+            UserSessionRepository userSessionRepository
     ) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -83,8 +84,8 @@ public class AdminServiceImpl implements AdminService {
         this.systemSettingsRepository = systemSettingsRepository;
         this.applicationContext = applicationContext;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
-        this.entityManager = entityManager;
         this.addressRepository = addressRepository;
+        this.userSessionRepository = userSessionRepository;
     }
 
     // ===================== COMMON =====================
@@ -300,55 +301,38 @@ public class AdminServiceImpl implements AdminService {
         try {
             User user = getUserByUserId(userId);
 
-            /* ===============================
-               1️⃣ ADDRESS TABLE (YOU MISSED THIS)
-            =============================== */
+            // 1️⃣ SESSIONS
+            userSessionRepository.deleteByUser_UserId(userId);
+
+            // 2️⃣ ADDRESS
             addressRepository.deleteByUser_UserId(userId);
 
-            /* ===============================
-               2️⃣ RELATION TABLES
-            =============================== */
-            parentStudentRelationRepository
-                    .deleteByStudent_User_UserId(userId);
+            // 3️⃣ RELATIONS
+            parentStudentRelationRepository.deleteByStudent_User_UserId(userId);
+            parentStudentRelationRepository.deleteByParent_User_UserId(userId);
 
-            parentStudentRelationRepository
-                    .deleteByParent_User_UserId(userId);
-
-            /* ===============================
-               3️⃣ HISTORY / LOG TABLES
-            =============================== */
-            loginHistoryRepository.deleteByUser(user);
-            passwordResetTokenRepository.deleteByUser(user);
-            auditLogRepository.deleteByUserId(userId);
-
-            /* ===============================
-               4️⃣ CHILD ENTITIES
-            =============================== */
+            // 4️⃣ CHILD ENTITIES
             studentRepository.findByUser(user)
                     .forEach(studentRepository::delete);
 
             instructorRepository.findByUser(user)
                     .forEach(instructorRepository::delete);
 
-            parentRepository.findAll()
-                    .stream()
-                    .filter(p -> p.getUser().getUserId().equals(userId))
-                    .forEach(parentRepository::delete);
+            parentRepository.deleteByUser_UserId(userId);
 
-            /* ===============================
-               5️⃣ SYSTEM SETTINGS
-            =============================== */
+            // 5️⃣ HISTORY / LOGS
+            loginHistoryRepository.deleteByUser(user);
+            passwordResetTokenRepository.deleteByUser(user);
+            auditLogRepository.deleteByUserId(userId);
+
+            // 6️⃣ SYSTEM SETTINGS
             systemSettingsRepository.findByUserId(userId)
                     .ifPresent(systemSettingsRepository::delete);
 
-            /* ===============================
-               6️⃣ USER (LAST — ALWAYS LAST)
-            =============================== */
+            // 7️⃣ USER LAST
             userRepository.delete(user);
 
-            /* ===============================
-               7️⃣ AUDIT
-            =============================== */
+            // SUCCESS
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("DELETE", "USER", userId, admin, request);
 
@@ -357,7 +341,6 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
-
 
 
 
@@ -452,7 +435,49 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
-
     
+    @Override
+    public void updateMultiSessionAccess(
+            Long userId,
+            boolean allowMultiSession,
+            User admin,
+            HttpServletRequest request
+    ) {
+        try {
+            // 1️⃣ Fetch system settings
+            SystemSettings settings = systemSettingsRepository
+                    .findByUserId(userId)
+                    .orElseThrow(() -> new RuntimeException("System settings not found"));
+
+            // 2️⃣ Update flag
+            settings.setMultiSession(allowMultiSession);
+            settings.setUpdatedTime(LocalDateTime.now());
+            systemSettingsRepository.save(settings);
+
+            // 3️⃣ Notify user (optional but recommended)
+            User user = getUserByUserId(userId);
+            emailService.sendRegistrationMail(
+                    user,
+                    allowMultiSession
+                            ? "MULTI SESSION ENABLED"
+                            : "MULTI SESSION DISABLED"
+            );
+
+            // 4️⃣ Audit success
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit(
+                    allowMultiSession ? "MULTI_SESSION_ENABLE" : "MULTI_SESSION_DISABLE",
+                    "SYSTEM_SETTINGS",
+                    userId,
+                    admin,
+                    request
+            );
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+
 
 }

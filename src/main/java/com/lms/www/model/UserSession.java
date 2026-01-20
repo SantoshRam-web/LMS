@@ -40,4 +40,7 @@ public class UserSession {
 
     @Column(name = "logout_time")
     private LocalDateTime logoutTime;
+    
+    @Column(name = "last_activity_time")
+    private LocalDateTime lastActivityTime;
 }

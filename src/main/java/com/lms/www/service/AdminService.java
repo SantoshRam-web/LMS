@@ -46,4 +46,12 @@ public interface AdminService {
             User admin,
             HttpServletRequest request
     );
+    
+    void updateMultiSessionAccess(
+            Long userId,
+            boolean allowMultiSession,
+            User admin,
+            HttpServletRequest request
+    );
+
 }
