@@ -144,6 +144,37 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
-    
+    @Override
+    public void sendOtpMail(String email, String otp) {
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setTo(email);
+        msg.setSubject("OTP Verification");
+        msg.setText(
+            "Your OTP is: " + otp +
+            "\nValid for 10 minutes."
+        );
+        mailSender.send(msg);
+    }
+
+    @Override
+    public void sendSuperAdminCredentialsMail(
+            String email,
+            String password,
+            String superAdminUrl
+    ) {
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setTo(email);
+        msg.setSubject("Super Admin Access");
+
+        msg.setText(
+            "Welcome!\n\n" +
+            "Web Address: " + superAdminUrl + "\n" +
+            "Username: " + email + "\n" +
+            "Password: " + password + "\n\n" +
+            "Please keep these credentials safe."
+        );
+        mailSender.send(msg);
+    }
+
     
 }

@@ -18,15 +18,22 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
 
             .authorizeHttpRequests(auth -> auth
+            		
+            		.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+
 
                 // 🔓 PUBLIC
                 .requestMatchers("/auth/login").permitAll()
+                
+                // 🔓 SUPER ADMIN SIGNUP (OTP FLOW)
+                .requestMatchers("/super-admin/signup/**").permitAll()
 
                 // 🔐 ADMIN
                 .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
@@ -57,6 +64,24 @@ public class SecurityConfig {
 
         return http.build();
     }
+
+    @Bean
+    org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        org.springframework.web.cors.CorsConfiguration configuration =
+                new org.springframework.web.cors.CorsConfiguration();
+
+        configuration.addAllowedOriginPattern("*");
+        configuration.addAllowedMethod("*");
+        configuration.addAllowedHeader("*");
+        configuration.setAllowCredentials(true);
+
+        org.springframework.web.cors.UrlBasedCorsConfigurationSource source =
+                new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
 
     @Bean
     BCryptPasswordEncoder passwordEncoder() {

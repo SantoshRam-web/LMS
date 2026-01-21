@@ -25,5 +25,13 @@ public interface EmailService {
     void sendPasswordResetMail(User user, LocalDateTime time);
     
     void sendAccountDeletionMail(User user);
+    
+    void sendOtpMail(String email, String otp);
+    void sendSuperAdminCredentialsMail(
+            String email,
+            String password,
+            String superAdminUrl
+    );
+
 
 }

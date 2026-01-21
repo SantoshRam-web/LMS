@@ -42,6 +42,16 @@ public class JwtFilter extends OncePerRequestFilter {
         this.userSessionRepository = userSessionRepository;
         this.systemSettingsRepository = systemSettingsRepository;
     }
+    
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+
+        String path = request.getRequestURI();
+
+        return path.startsWith("/auth/")
+            || path.startsWith("/super-admin/signup/");
+    }
+
 
     @Override
     protected void doFilterInternal(

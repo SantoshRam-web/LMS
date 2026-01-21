@@ -125,23 +125,16 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("Invalid credentials");
         }
 
-        // ✅ PASSWORD OK — CLEAR FAILURES
+        // ✅ LOGIN SUCCESS
         failedLoginAttemptService.clearAttempts(user.getUserId());
 
-        // 🚫 STRICT MULTI-SESSION BLOCK
-        if (Boolean.FALSE.equals(settings.getMultiSession())) {
-            userSessionRepository
-                    .findTopByUserOrderByLoginTimeDesc(user)
-                    .ifPresent(existingSession -> {
-                        if (existingSession.getLogoutTime() == null) {
-                            throw new RuntimeException(
-                                    "User already has an active session. Multiple sessions are not allowed."
-                            );
-                        }
-                    });
-        }
+        // 🔥 STEP 1: EXPIRE IDLE SESSIONS (FIXES DEADLOCK)
+        expireIdleSessions(user, settings);
 
-        // ✅ LOGIN AUDIT FLAG
+        // 🔥 STEP 2: ENFORCE SINGLE / MULTI SESSION RULE
+        validateMultiSession(user, settings);
+
+        // audit flag
         settings.setEnableLoginAudit(true);
         systemSettingsRepository.save(settings);
 
@@ -159,7 +152,7 @@ public class AuthServiceImpl implements AuthService {
                 LocalDateTime.now()
         );
 
-        // ✅ PERMISSIONS
+        // 🔑 PERMISSIONS
         List<String> permissions =
                 rolePermissionRepository.findByRoleName(user.getRoleName())
                         .stream()
@@ -167,7 +160,6 @@ public class AuthServiceImpl implements AuthService {
                         .distinct()
                         .toList();
 
-        // ✅ TOKEN
         String token = jwtUtil.generateToken(
                 user.getUserId(),
                 user.getEmail(),
@@ -175,7 +167,7 @@ public class AuthServiceImpl implements AuthService {
                 permissions
         );
 
-        // ✅ SESSION
+        // ✅ CREATE SESSION
         UserSession session = new UserSession();
         session.setUser(user);
         session.setToken(token);
@@ -185,6 +177,59 @@ public class AuthServiceImpl implements AuthService {
 
         return token;
     }
+
+    /**
+     * 🔥 EXPIRE SESSIONS THAT TIMED OUT DUE TO INACTIVITY
+     * This prevents login deadlock.
+     */
+    private void expireIdleSessions(User user, SystemSettings settings) {
+
+        List<UserSession> activeSessions =
+                userSessionRepository.findByUserAndLogoutTimeIsNull(user);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        for (UserSession session : activeSessions) {
+
+            LocalDateTime lastActivity =
+                    session.getLastActivityTime() != null
+                            ? session.getLastActivityTime()
+                            : session.getLoginTime();
+
+            LocalDateTime expiryTime =
+                    lastActivity.plusMinutes(settings.getSessionTimeout());
+
+            if (now.isAfter(expiryTime)) {
+                session.setLogoutTime(now);
+                userSessionRepository.save(session);
+            }
+        }
+    }
+
+    /**
+     * 🔐 ENFORCE MULTI-SESSION RULE
+     */
+    private void validateMultiSession(User user, SystemSettings settings) {
+
+        // multi-session users → no restriction
+        if (Boolean.TRUE.equals(settings.getMultiSession())) {
+            return;
+        }
+
+        // single-session users → block if active session exists
+        boolean hasActiveSession =
+                userSessionRepository
+                        .findByUserAndLogoutTimeIsNull(user)
+                        .stream()
+                        .anyMatch(session -> session.getLogoutTime() == null);
+
+        if (hasActiveSession) {
+            throw new RuntimeException(
+                    "User already has an active session. Please logout first."
+            );
+        }
+    }
+
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void markLoginFailure(SystemSettings settings) {
