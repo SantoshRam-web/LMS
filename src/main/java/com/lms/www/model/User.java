@@ -34,7 +34,10 @@ public class User {
     private String email;
 
     private String password;
+    
+    @Column(name = "phone", unique = true, nullable = false)
     private String phone;
+
     private Boolean enabled = true;
 
     @Column(name = "role_name", nullable = false)

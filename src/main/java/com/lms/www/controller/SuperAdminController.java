@@ -4,7 +4,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.lms.www.service.SuperAdminService;
@@ -34,11 +33,18 @@ public class SuperAdminController {
     // 🔹 VERIFY OTP
     @PostMapping("/signup/verify-otp")
     public ResponseEntity<String> verifyOtp(
-            @RequestParam String email,
-            @RequestParam String otp
+            @RequestBody VerifyOtpRequest request
     ) {
-        service.verifyOtp(email, otp);
+        service.verifyOtp(request.getEmail(), request.getOtp());
         return ResponseEntity.ok("OTP verified");
+    }
+
+    static class VerifyOtpRequest {
+        private String email;
+        private String otp;
+
+        public String getEmail() { return email; }
+        public String getOtp() { return otp; }
     }
 
     @PostMapping("/signup")

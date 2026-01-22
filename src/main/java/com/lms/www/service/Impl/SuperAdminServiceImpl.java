@@ -38,10 +38,15 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
     }
-
+    
+    
     // ================= INIT SIGNUP =================
     @Override
     public void requestOtp(String email, String phone) {
+    	
+    	if (userRepository.existsByPhone(phone)) {
+    	    throw new RuntimeException("Phone number already in use");
+    	}
 
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("User already exists");
@@ -93,6 +98,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         entity.setVerified(true);
         otpRepo.save(entity);
     }
+    
+    
 
     // ================= FINAL SIGNUP =================
     @Override
@@ -104,12 +111,21 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             String phone
     ) {
 
-        otpRepo.findByEmailAndPurposeAndVerifiedFalse(
-                email, "SUPER_ADMIN_SIGNUP"
-        ).ifPresent(o -> {
-            throw new RuntimeException("OTP not verified");
-        });
+        // 🔒 1️⃣ OTP MUST EXIST AND MUST BE VERIFIED
+        OtpVerification otp = otpRepo
+                .findByEmailAndPurpose(email, "SUPER_ADMIN_SIGNUP")
+                .orElseThrow(() ->
+                        new RuntimeException("OTP verification required")
+                );
 
+        if (!Boolean.TRUE.equals(otp.getVerified())) {
+            throw new RuntimeException("OTP not verified");
+        }
+
+        // 🔒 2️⃣ Prevent reuse of same OTP
+        otpRepo.delete(otp);
+
+        // 🔒 3️⃣ Create Super Admin user
         User user = new User();
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
@@ -121,17 +137,42 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         user = userRepository.save(user);
 
+        // 🔒 4️⃣ Create system settings (ALL mandatory fields)
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
-        settings.setMultiSession(true);
-        settings.setSessionTimeout(60L);
+        settings.setMaxLoginAttempts(5L);
+        settings.setAccLockDuration(30L);
+        settings.setPassExpiryDays(60L);
+        settings.setPassLength(10L);
         settings.setJwtExpiryMins(60L);
+        settings.setSessionTimeout(60L);
+        settings.setMultiSession(true);
+        settings.setPasswordLastUpdatedAt(LocalDateTime.now());
+        settings.setUpdatedTime(LocalDateTime.now());
+
         systemSettingsRepository.save(settings);
 
-        String url = user.getFirstName().toLowerCase() + ".yourdomain.com";
-
-        emailService.sendSuperAdminCredentialsMail(
-                email, password, url
-        );
+        // 🔒 5️⃣ Send credentials mail
+        String url = generateSuperAdminUrl(user.getEmail());
+        emailService.sendSuperAdminCredentialsMail(email, password, url);
     }
+    
+    private String generateSuperAdminUrl(String email) {
+
+        // take part before @
+        String localPart = email.split("@")[0];
+
+        // keep ONLY characters (remove numbers + special chars)
+        localPart = localPart
+                .toLowerCase()
+                .replaceAll("[^a-z]", "");
+
+        if (localPart.isEmpty()) {
+            throw new RuntimeException("Invalid email for URL generation");
+        }
+
+        return localPart + ".yourdomain.com";
+    }
+    
+
 }

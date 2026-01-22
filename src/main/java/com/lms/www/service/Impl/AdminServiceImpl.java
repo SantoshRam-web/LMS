@@ -115,6 +115,10 @@ public class AdminServiceImpl implements AdminService {
         user.setPhone(phone);
         user.setEnabled(true);
         user.setRoleName(roleName);
+        
+        if (userRepository.existsByPhone(phone)) {
+            throw new RuntimeException("Phone number already in use");
+        }
 
         user = userRepository.save(user);
         
@@ -478,6 +482,8 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
+    
+    
 
 
 }
