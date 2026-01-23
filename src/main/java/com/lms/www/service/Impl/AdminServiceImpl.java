@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.config.UserAuthorizationUtil;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
@@ -285,6 +286,13 @@ public class AdminServiceImpl implements AdminService {
     public void updateUser(Long userId, User updatedUser, User admin, HttpServletRequest request) {
         try {
             User existing = getUserByUserId(userId);
+            
+         // 🔒 BLOCK ADMIN → SUPER ADMIN
+            UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+                    admin,
+                    existing
+            );
+            
             if (updatedUser.getFirstName() != null) existing.setFirstName(updatedUser.getFirstName());
             if (updatedUser.getLastName() != null) existing.setLastName(updatedUser.getLastName());
             if (updatedUser.getPhone() != null) existing.setPhone(updatedUser.getPhone());
@@ -301,50 +309,50 @@ public class AdminServiceImpl implements AdminService {
     }
 
     @Override
-    public void deleteUser(Long userId, User admin, HttpServletRequest request) {
+    public void deleteUser(Long userId, User requester, HttpServletRequest request) {
         try {
-            User user = getUserByUserId(userId);
+        	User targetUser = getUserByUserId(userId);
 
-            // 1️⃣ SESSIONS
+        	// 🔒 BLOCK ADMIN → SUPER ADMIN
+        	UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+        	        requester,
+        	        targetUser
+        	);
+
+
+            // ✅ PROCEED WITH NORMAL DELETE FLOW
             userSessionRepository.deleteByUser_UserId(userId);
-
-            // 2️⃣ ADDRESS
             addressRepository.deleteByUser_UserId(userId);
 
-            // 3️⃣ RELATIONS
             parentStudentRelationRepository.deleteByStudent_User_UserId(userId);
             parentStudentRelationRepository.deleteByParent_User_UserId(userId);
 
-            // 4️⃣ CHILD ENTITIES
-            studentRepository.findByUser(user)
+            studentRepository.findByUser(targetUser)
                     .forEach(studentRepository::delete);
 
-            instructorRepository.findByUser(user)
+            instructorRepository.findByUser(targetUser)
                     .forEach(instructorRepository::delete);
 
             parentRepository.deleteByUser_UserId(userId);
 
-            // 5️⃣ HISTORY / LOGS
-            loginHistoryRepository.deleteByUser(user);
-            passwordResetTokenRepository.deleteByUser(user);
+            loginHistoryRepository.deleteByUser(targetUser);
+            passwordResetTokenRepository.deleteByUser(targetUser);
             auditLogRepository.deleteByUserId(userId);
 
-            // 6️⃣ SYSTEM SETTINGS
             systemSettingsRepository.findByUserId(userId)
                     .ifPresent(systemSettingsRepository::delete);
 
-            // 7️⃣ USER LAST
-            userRepository.delete(user);
+            userRepository.delete(targetUser);
 
-            // SUCCESS
-            proxy().markAuditStatus(admin.getUserId(), true);
-            audit("DELETE", "USER", userId, admin, request);
+            proxy().markAuditStatus(requester.getUserId(), true);
+            audit("DELETE", "USER", userId, requester, request);
 
         } catch (RuntimeException ex) {
-            proxy().markAuditStatus(admin.getUserId(), false);
+            proxy().markAuditStatus(requester.getUserId(), false);
             throw ex;
         }
     }
+
 
 
 
@@ -401,6 +409,13 @@ public class AdminServiceImpl implements AdminService {
         try {
             // 1️⃣ Fetch user
             User user = getUserByUserId(userId);
+            
+         // 🔒 BLOCK ADMIN → SUPER ADMIN
+            UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+                    admin,
+                    user
+            );
+
 
             // 2️⃣ Enable / Disable
             user.setEnabled(enabled);
@@ -448,18 +463,23 @@ public class AdminServiceImpl implements AdminService {
             HttpServletRequest request
     ) {
         try {
-            // 1️⃣ Fetch system settings
+
+            User user = getUserByUserId(userId);
+
+            // 🔒 BLOCK NON-SUPER-ADMIN → SUPER-ADMIN
+            UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+                    admin,
+                    user
+            );
+
             SystemSettings settings = systemSettingsRepository
                     .findByUserId(userId)
                     .orElseThrow(() -> new RuntimeException("System settings not found"));
 
-            // 2️⃣ Update flag
             settings.setMultiSession(allowMultiSession);
             settings.setUpdatedTime(LocalDateTime.now());
             systemSettingsRepository.save(settings);
 
-            // 3️⃣ Notify user (optional but recommended)
-            User user = getUserByUserId(userId);
             emailService.sendRegistrationMail(
                     user,
                     allowMultiSession
@@ -467,7 +487,6 @@ public class AdminServiceImpl implements AdminService {
                             : "MULTI SESSION DISABLED"
             );
 
-            // 4️⃣ Audit success
             proxy().markAuditStatus(admin.getUserId(), true);
             audit(
                     allowMultiSession ? "MULTI_SESSION_ENABLE" : "MULTI_SESSION_DISABLE",
@@ -482,6 +501,7 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
+
     
     
 

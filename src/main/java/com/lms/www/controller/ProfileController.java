@@ -24,6 +24,7 @@ public class ProfileController {
 
     @GetMapping
     public User myProfile() {
+    	
         String email = SecurityContextHolder.getContext()
                 .getAuthentication().getName();
         return adminService.getUserByEmail(email);

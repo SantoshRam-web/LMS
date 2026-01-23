@@ -3,11 +3,13 @@ package com.lms.www.service.Impl;
 import java.time.LocalDateTime;
 
 import org.springframework.context.ApplicationContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.config.UserAuthorizationUtil;
 import com.lms.www.model.AuditLog;
 import com.lms.www.model.PasswordResetTokens;
 import com.lms.www.model.SystemSettings;
@@ -65,6 +67,20 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
             User user = userRepository.findById(userId)
                     .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            String requesterEmail = SecurityContextHolder
+                    .getContext()
+                    .getAuthentication()
+                    .getName();
+
+            User requester = userRepository.findByEmail(requesterEmail)
+                    .orElseThrow(() -> new RuntimeException("Requester not found"));
+
+            // 🔒 BLOCK NON-SUPER-ADMIN → SUPER-ADMIN
+            UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+                    requester,
+                    user
+            );
 
             // 🔐 update password
             user.setPassword(passwordEncoder.encode(newPassword));

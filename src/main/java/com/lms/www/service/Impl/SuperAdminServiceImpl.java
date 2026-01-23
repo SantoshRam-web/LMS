@@ -6,6 +6,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.controller.AdminRequest;
 import com.lms.www.model.OtpVerification;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
@@ -14,6 +15,8 @@ import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.service.EmailService;
 import com.lms.www.service.SuperAdminService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @Transactional
@@ -174,5 +177,58 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         return localPart + ".yourdomain.com";
     }
     
+    @Override
+    public void createAdmin(
+            AdminRequest adminRequest,
+            HttpServletRequest httpRequest
+    ) {
 
+        // 1️⃣ Email uniqueness check
+        if (userRepository.existsByEmail(adminRequest.getEmail())) {
+            throw new RuntimeException("User already exists with this email");
+        }
+
+        // 2️⃣ Create ADMIN user
+        User admin = new User();
+        admin.setEmail(adminRequest.getEmail());
+        admin.setPassword(
+                passwordEncoder.encode(adminRequest.getPassword())
+        );
+        admin.setFirstName(adminRequest.getFirstName());
+        admin.setLastName(adminRequest.getLastName());
+        admin.setPhone(adminRequest.getPhone());
+        admin.setEnabled(true);
+        admin.setRoleName("ROLE_ADMIN");
+
+        admin = userRepository.save(admin);
+
+        // 3️⃣ Create SYSTEM SETTINGS (ALL REQUIRED FIELDS)
+        SystemSettings settings = new SystemSettings();
+        settings.setUserId(admin.getUserId());
+
+        settings.setMaxLoginAttempts(5L);
+        settings.setAccLockDuration(30L);
+        settings.setPassExpiryDays(60L);
+        settings.setPassLength(10L);
+
+        settings.setJwtExpiryMins(60L);
+        settings.setSessionTimeout(60L);
+
+        settings.setMultiSession(false);
+        settings.setEnableLoginAudit(null);
+        settings.setEnableAuditLog(null);
+
+        settings.setPasswordLastUpdatedAt(LocalDateTime.now());
+        settings.setUpdatedTime(LocalDateTime.now());
+
+        systemSettingsRepository.save(settings);
+
+        // 4️⃣ Send credentials mail
+        emailService.sendAdminCredentialsMail(
+                admin.getEmail(),
+                adminRequest.getPassword()
+        );
+    }
+
+ 
 }

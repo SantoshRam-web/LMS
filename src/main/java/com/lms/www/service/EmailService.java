@@ -32,6 +32,8 @@ public interface EmailService {
             String password,
             String superAdminUrl
     );
+    
+    void sendAdminCredentialsMail(String email, String password);
 
 
 }

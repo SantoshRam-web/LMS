@@ -25,36 +25,37 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
 
             .authorizeHttpRequests(auth -> auth
-            		
-            		.requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 
+            	    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
 
-                // 🔓 PUBLIC
-                .requestMatchers("/auth/login").permitAll()
-                
-                // 🔓 SUPER ADMIN SIGNUP (OTP FLOW)
-                .requestMatchers("/super-admin/signup/**").permitAll()
+            	    // 🔓 PUBLIC
+            	    .requestMatchers("/auth/login").permitAll()
+            	    .requestMatchers("/auth/reset-password").permitAll()
 
-                // 🔐 ADMIN
-                .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+            	    // 🔓 SUPER ADMIN SIGNUP (ONLY OTP FLOW)
+            	    .requestMatchers("/super-admin/signup/**").permitAll()
 
-                // 🔐 STUDENT
-                .requestMatchers("/student/**").hasAuthority("ROLE_STUDENT")
+            	    // 🔐 SUPER ADMIN (ALL OTHER SUPER ADMIN APIs)
+            	    .requestMatchers("/super-admin/**").hasAuthority("ROLE_SUPER_ADMIN")
 
-                // 🔐 INSTRUCTOR
-                .requestMatchers("/instructor/**").hasAuthority("ROLE_INSTRUCTOR")
+            	    // 🔐 ADMIN
+            	    .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
 
-                // 🔐 PARENT
-                .requestMatchers("/parent/**").hasAuthority("ROLE_PARENT")
+            	    // 🔐 STUDENT
+            	    .requestMatchers("/student/**").hasAuthority("ROLE_STUDENT")
 
-                // 🔐 SELF PROFILE
-                .requestMatchers("/me/**").authenticated()
-                
-                .requestMatchers("/auth/login").permitAll()
-                .requestMatchers("/auth/reset-password").permitAll()
+            	    // 🔐 INSTRUCTOR
+            	    .requestMatchers("/instructor/**").hasAuthority("ROLE_INSTRUCTOR")
 
-                .anyRequest().authenticated()
-            )
+            	    // 🔐 PARENT
+            	    .requestMatchers("/parent/**").hasAuthority("ROLE_PARENT")
+
+            	    // 🔐 SELF
+            	    .requestMatchers("/me/**").authenticated()
+
+            	    .anyRequest().authenticated()
+            	)
+
 
             .sessionManagement(sess ->
                 sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)

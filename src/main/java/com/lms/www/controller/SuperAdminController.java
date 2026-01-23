@@ -8,6 +8,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.lms.www.service.SuperAdminService;
 
+import jakarta.servlet.http.HttpServletRequest;
+
 @RestController
 @RequestMapping("/super-admin")
 public class SuperAdminController {
@@ -74,5 +76,15 @@ public class SuperAdminController {
         public String getLastName() { return lastName; }
         public String getPhone() { return phone; }
     }
+    
+    @PostMapping("/admin/create")
+    public ResponseEntity<String> createAdmin(
+            @RequestBody AdminRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        service.createAdmin(request, httpRequest);
+        return ResponseEntity.ok("Admin created successfully");
+    }
+
 
 }

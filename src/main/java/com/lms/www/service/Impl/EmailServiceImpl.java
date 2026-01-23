@@ -176,5 +176,21 @@ public class EmailServiceImpl implements EmailService {
         mailSender.send(msg);
     }
 
-    
+    @Override
+    public void sendAdminCredentialsMail(
+            String email,
+            String password
+    ) {
+        SimpleMailMessage msg = new SimpleMailMessage();
+        msg.setTo(email);
+        msg.setSubject("Admin Access");
+
+        msg.setText(
+            "Welcome!\n\n" +
+            "Username: " + email + "\n" +
+            "Password: " + password + "\n\n" +
+            "Please keep these credentials safe."
+        );
+        mailSender.send(msg);
+    }
 }

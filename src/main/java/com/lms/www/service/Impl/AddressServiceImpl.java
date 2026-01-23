@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.config.UserAuthorizationUtil;
 import com.lms.www.model.Address;
 import com.lms.www.model.AuditLog;
 import com.lms.www.model.User;
@@ -42,6 +43,11 @@ public class AddressServiceImpl implements AddressService {
         if (addressRepository.findByUser(user).isPresent()) {
             throw new RuntimeException("Address already exists for user");
         }
+        
+        UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+                admin,
+                user
+        );
 
         address.setUser(user);
         Address saved = addressRepository.save(address);
@@ -64,7 +70,15 @@ public class AddressServiceImpl implements AddressService {
     @Override
     public Address updateAddress(Long userId, Address newAddress, User admin, HttpServletRequest request) {
 
+    	
         Address existing = getAddress(userId);
+        
+        User targetUser = existing.getUser();
+
+        UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+                admin,
+                targetUser
+        );
 
         if (newAddress.getPinCode() != null)
             existing.setPinCode(newAddress.getPinCode());
@@ -92,6 +106,14 @@ public class AddressServiceImpl implements AddressService {
     public void deleteAddress(Long userId, User admin, HttpServletRequest request) {
 
         Address address = getAddress(userId);
+        
+        User targetUser = address.getUser();
+
+        UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+                admin,
+                targetUser
+        );
+
 
         addressRepository.delete(address); // 🔴 REAL DELETE
 
