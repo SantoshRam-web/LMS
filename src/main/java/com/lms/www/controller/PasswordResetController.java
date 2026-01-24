@@ -1,11 +1,14 @@
 package com.lms.www.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lms.www.model.User;
+import com.lms.www.repository.UserRepository;
 import com.lms.www.service.PasswordResetService;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,9 +17,12 @@ import jakarta.servlet.http.HttpServletRequest;
 public class PasswordResetController {
 
     private final PasswordResetService passwordResetService;
+    private final UserRepository userRepository;
 
-    public PasswordResetController(PasswordResetService passwordResetService) {
+    public PasswordResetController(PasswordResetService passwordResetService,
+    		UserRepository userRepository) {
         this.passwordResetService = passwordResetService;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/reset-password")
@@ -44,6 +50,15 @@ public class PasswordResetController {
             return newPassword;
         }
     }
+    
+    String requesterEmail = SecurityContextHolder
+            .getContext()
+            .getAuthentication()
+            .getName();
+
+    User requester = userRepository.findByEmail(requesterEmail)
+            .orElseThrow(() -> new RuntimeException("Requester not found"));
+
 }
 
 
