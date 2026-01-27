@@ -53,6 +53,24 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
     @Override
     public void resetPassword(Long userId, String newPassword, String ipAddress) {
+    	
+    	String requesterEmail = SecurityContextHolder
+    	        .getContext()
+    	        .getAuthentication()
+    	        .getName();
+
+    	User requester = userRepository.findByEmail(requesterEmail)
+    	        .orElseThrow(() -> new RuntimeException("Requester not found"));
+
+    	User targetUser = userRepository.findById(userId)
+    	        .orElseThrow(() -> new RuntimeException("User not found"));
+
+    	// 🔒 BLOCK NON-SUPER-ADMIN FROM RESETTING SUPER-ADMIN PASSWORD
+    	UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
+    	        requester,
+    	        targetUser
+    	);
+
 
         SystemSettings settings = systemSettingsRepository
                 .findByUserId(userId)
@@ -65,28 +83,12 @@ public class PasswordResetServiceImpl implements PasswordResetService {
                 );
             }
 
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
             
-            String requesterEmail = SecurityContextHolder
-                    .getContext()
-                    .getAuthentication()
-                    .getName();
-
-            User requester = userRepository.findByEmail(requesterEmail)
-                    .orElseThrow(() -> new RuntimeException("Requester not found"));
-
-            // 🔒 BLOCK NON-SUPER-ADMIN → SUPER-ADMIN
-            UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
-                    requester,
-                    user
-            );
-
             // 🔐 update password
-            user.setPassword(passwordEncoder.encode(newPassword));
-            userRepository.save(user);
+            targetUser.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(targetUser);
             
-            emailService.sendPasswordResetMail(user, LocalDateTime.now());
+            emailService.sendPasswordResetMail(targetUser, LocalDateTime.now());
 
 
             // 🔑 reset expiry timer
@@ -97,20 +99,20 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
             // 🧾 password reset token
             PasswordResetTokens token = new PasswordResetTokens();
-            token.setUser(user);
+            token.setUser(targetUser);
             token.setResetToken("MANUAL_RESET_" + System.currentTimeMillis());
             token.setCreatedTime(LocalDateTime.now());
             passwordResetTokenRepository.save(token);
             
-            emailService.sendRegistrationMail(user, "PASSWORD RESET");
+            emailService.sendRegistrationMail(targetUser, "PASSWORD RESET");
 
 
             // ✅ audit log
             AuditLog log = new AuditLog();
             log.setAction("PASSWORD_RESET");
             log.setEntityName("USER");
-            log.setEntityId(user.getUserId());
-            log.setUserId(user.getUserId());
+            log.setEntityId(targetUser.getUserId());
+            log.setUserId(targetUser.getUserId());
             log.setCreatedTime(LocalDateTime.now());
             log.setIpAddress(ipAddress);
             auditLogRepository.save(log);
