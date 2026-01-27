@@ -20,7 +20,7 @@ public interface EmailService {
     // AUTH
     void sendLoginSuccessMail(User user, String ipAddress, LocalDateTime time);
 
-    void sendLoginFailedMail(String email, String ipAddress, LocalDateTime time);
+    void sendLoginFailedMail(String email, String ipAddress, String userAgent,LocalDateTime time);
 
     void sendPasswordResetMail(User user, LocalDateTime time);
     
@@ -34,6 +34,25 @@ public interface EmailService {
     );
     
     void sendAdminCredentialsMail(String email, String password);
+    
+    void sendNewDeviceLoginAlert(
+            User user,
+            String ipAddress,
+            String userAgent,
+            LocalDateTime time
+    );
 
+    void sendMultiSessionStatusMail(User user, boolean enabled);
+
+    void sendAccountStatusMail(User user, boolean enabled);
+    
+    void sendProfileUpdatedMail(User user);
+    
+    void sendAddressAddedMail(User user);
+    void sendAddressUpdatedMail(User user);
+    void sendAddressDeletedMail(User user);
+    
+    void sendParentStudentMappingMailToParent(User parent, User student);
+    void sendParentStudentMappingMailToStudent(User student, User parent);
 
 }

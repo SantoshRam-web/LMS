@@ -2,6 +2,7 @@ package com.lms.www.service.Impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,8 @@ import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.service.AuthService;
 import com.lms.www.service.EmailService;
 import com.lms.www.service.FailedLoginAttemptService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @Transactional(noRollbackFor = RuntimeException.class)
@@ -59,13 +62,16 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public String login(String email, String password, String ipAddress) {
+    public String login(String email, String password, String ipAddress, HttpServletRequest request) {
 
         User user = userRepository.findByEmail(email).orElse(null);
-
+        
+        String ipAddress1 = request.getRemoteAddr();
+        String userAgent = request.getHeader("User-Agent");
+        
         // ❌ USER NOT FOUND
         if (user == null) {
-            failedLoginAttemptService.recordFailedAttempt(null, ipAddress);
+            failedLoginAttemptService.recordFailedAttempt(null, ipAddress1);
             throw new RuntimeException("Invalid credentials");
         }
 
@@ -114,16 +120,52 @@ public class AuthServiceImpl implements AuthService {
             systemSettingsRepository.save(settings);
 
             failedLoginAttemptService
-                    .recordFailedAttempt(user.getUserId(), ipAddress);
+                    .recordFailedAttempt(user.getUserId(), ipAddress1);
 
             emailService.sendLoginFailedMail(
                     user.getEmail(),
-                    ipAddress,
+                    ipAddress1,
+                    userAgent,
                     LocalDateTime.now()
             );
 
             throw new RuntimeException("Invalid credentials");
         }
+        
+
+        Optional<LoginHistory> existingLogin =
+                loginHistoryRepository
+                    .findByUser_UserIdAndIpAddressAndUserAgent(
+                        user.getUserId(),
+                        ipAddress1,
+                        userAgent
+                    );
+
+        if (existingLogin.isEmpty()) {
+
+            // ✅ NEW DEVICE LOGIN
+            LoginHistory history = new LoginHistory();
+            history.setUser(user);
+            history.setIpAddress(ipAddress1);
+            history.setUserAgent(userAgent);
+            history.setLoginTime(LocalDateTime.now());
+            loginHistoryRepository.save(history);
+
+            // 📧 SEND SECURITY EMAIL
+            emailService.sendNewDeviceLoginAlert(
+                    user,
+                    ipAddress1,
+                    userAgent,
+                    LocalDateTime.now()
+            );
+
+        } else {
+            // 🔁 Known device → just update time
+            LoginHistory history = existingLogin.get();
+            history.setLoginTime(LocalDateTime.now());
+            loginHistoryRepository.save(history);
+        }
+
 
         // ✅ LOGIN SUCCESS
         failedLoginAttemptService.clearAttempts(user.getUserId());
@@ -141,16 +183,16 @@ public class AuthServiceImpl implements AuthService {
         // ✅ LOGIN HISTORY
         LoginHistory history = new LoginHistory();
         history.setUser(user);
-        history.setIpAddress(ipAddress);
+        history.setIpAddress(ipAddress1);
         history.setDevice("PostmanRuntime");
         history.setLoginTime(LocalDateTime.now());
         loginHistoryRepository.save(history);
 
-        emailService.sendLoginSuccessMail(
+        /*emailService.sendLoginSuccessMail(
                 user,
                 ipAddress,
                 LocalDateTime.now()
-        );
+        );*/
 
         // 🔑 PERMISSIONS
         List<String> permissions =

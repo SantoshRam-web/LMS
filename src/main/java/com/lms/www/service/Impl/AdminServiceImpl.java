@@ -298,7 +298,7 @@ public class AdminServiceImpl implements AdminService {
             if (updatedUser.getPhone() != null) existing.setPhone(updatedUser.getPhone());
 
             userRepository.save(existing);
-            emailService.sendRegistrationMail(existing, "PROFILE UPDATED");
+            emailService.sendProfileUpdatedMail(existing);
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("UPDATE", "USER", userId, admin, request);
 
@@ -354,9 +354,6 @@ public class AdminServiceImpl implements AdminService {
     }
 
 
-
-
-
     @Override
     public void mapParentToStudent(Long parentId, Long studentId, User admin, HttpServletRequest request) {
         try {
@@ -370,10 +367,15 @@ public class AdminServiceImpl implements AdminService {
             relation.setStudent(student);
             parentStudentRelationRepository.save(relation);
             
-            emailService.sendRegistrationMail(
-            	    parent.getUser(),
-            	    "PARENT-STUDENT MAPPED"
-            	);
+            emailService.sendParentStudentMappingMailToParent(
+                    parent.getUser(),
+                    student.getUser()
+            );
+
+            emailService.sendParentStudentMappingMailToStudent(
+                    student.getUser(),
+                    parent.getUser()
+            );
 
 
             proxy().markAuditStatus(admin.getUserId(), true);
@@ -421,18 +423,7 @@ public class AdminServiceImpl implements AdminService {
             user.setEnabled(enabled);
             userRepository.save(user);
 
-            // 3️⃣ Send email notification
-            if (enabled) {
-                emailService.sendRegistrationMail(
-                        user,
-                        "ACCOUNT ENABLED"
-                );
-            } else {
-                emailService.sendRegistrationMail(
-                        user,
-                        "ACCOUNT DISABLED"
-                );
-            }
+            emailService.sendAccountStatusMail(user, enabled);
 
             // 4️⃣ Mark audit success (ADMIN)
             proxy().markAuditStatus(admin.getUserId(), true);
@@ -480,12 +471,7 @@ public class AdminServiceImpl implements AdminService {
             settings.setUpdatedTime(LocalDateTime.now());
             systemSettingsRepository.save(settings);
 
-            emailService.sendRegistrationMail(
-                    user,
-                    allowMultiSession
-                            ? "MULTI SESSION ENABLED"
-                            : "MULTI SESSION DISABLED"
-            );
+            emailService.sendMultiSessionStatusMail(user, allowMultiSession);
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit(
@@ -501,9 +487,6 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
-
-    
-    
 
 
 }

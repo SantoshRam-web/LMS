@@ -94,13 +94,29 @@ public class EmailServiceImpl implements EmailService {
     }
 
     @Override
-    public void sendLoginFailedMail(String email, String ipAddress, LocalDateTime time) {
-        send(
-            email,
-            "Failed Login Attempt",
-            "Failed login attempt detected.\n\nIP: " + ipAddress + "\nTime: " + time
-        );
+    public void sendLoginFailedMail(
+            String email,
+            String ipAddress,
+            String userAgent,
+            LocalDateTime time
+    ) {
+
+        String subject = "Failed Login Attempt Detected";
+
+        String body =
+                "Hello,\n\n" +
+                "We detected a failed login attempt to your LMS account.\n\n" +
+                "Details:\n" +
+                "IP Address: " + ipAddress + "\n" +
+                "Time: " + time + "\n" +
+                "Device: "+userAgent+ "\n\n"+
+                "If this was you, you can safely ignore this message.\n" +
+                "If this was NOT you, we strongly recommend resetting your password immediately.\n\n" +
+                "- LMS Security Team";
+
+        send(email, subject, body);
     }
+
 
     @Override
     public void sendPasswordResetMail(User user, LocalDateTime time) {
@@ -193,4 +209,155 @@ public class EmailServiceImpl implements EmailService {
         );
         mailSender.send(msg);
     }
+    
+    @Override
+    public void sendNewDeviceLoginAlert(
+            User user,
+            String ipAddress,
+            String userAgent,
+            LocalDateTime time
+    ) {
+        String subject = "New Login Detected on Your Account";
+
+        String body = """
+            Hi %s,
+
+            We detected a login to your account from a new device.
+
+            📅 Time: %s
+            🌍 IP Address: %s
+            💻 Device: %s
+
+            If this was you, no action is needed.
+            If not, please reset your password immediately.
+
+            Regards,
+            LMS Security Team
+            """.formatted(
+                user.getFirstName(),
+                time,
+                ipAddress,
+                userAgent
+            );
+
+        send(user.getEmail(), subject, body);
+    }
+    
+    @Override
+    public void sendMultiSessionStatusMail(User user, boolean enabled) {
+
+        String subject = "LMS Security Settings Updated";
+
+        String body =
+                "Hello " + user.getFirstName() + ",\n\n" +
+                "Multi-session access has been " +
+                (enabled ? "ENABLED" : "DISABLED") +
+                " for your LMS account.\n\n" +
+                "If you have any queries, please contact support immediately.\n\n" +
+                "- LMS Team";
+
+        send(user.getEmail(), subject, body);
+    }
+    
+    @Override
+    public void sendAccountStatusMail(User user, boolean enabled) {
+
+        String subject = enabled
+                ? "Your LMS Account Has Been Enabled"
+                : "Your LMS Account Has Been Disabled";
+
+        String body =
+                "Hello " + user.getFirstName() + ",\n\n" +
+                "Your LMS account has been " +
+                (enabled ? "ENABLED" : "DISABLED") + ".\n\n" +
+                (enabled
+                        ? "You can now log in and continue using the platform."
+                        : "Please contact the administrator if you believe this is a mistake."
+                ) +
+                "\n\n- LMS Team";
+
+        send(user.getEmail(), subject, body);
+    }
+    
+    @Override
+    public void sendProfileUpdatedMail(User user) {
+
+        String subject = "Profile Updated Successfully";
+
+        String body =
+                "Hello " + user.getFirstName() + ",\n\n" +
+                "Your profile details have been updated successfully.\n\n" +
+                "If you did not make this change, please contact support immediately.\n\n" +
+                "- LMS Team";
+
+        send(user.getEmail(), subject, body);
+    }
+    
+    @Override
+    public void sendAddressAddedMail(User user) {
+        send(
+            user.getEmail(),
+            "Address Added",
+            "Hello " + user.getFirstName() + ",\n\n" +
+            "A new address has been added to your LMS account.\n\n" +
+            "Verify your profile for more details."+
+            "- LMS Team"
+        );
+    }
+    
+    @Override
+    public void sendAddressUpdatedMail(User user) {
+        send(
+            user.getEmail(),
+            "Address Updated",
+            "Hello " + user.getFirstName() + ",\n\n" +
+            "Your address details have been updated.\n\n" +
+            "Verify your profile for more details."+
+            "- LMS Team"
+        );
+    }
+    
+    @Override
+    public void sendAddressDeletedMail(User user) {
+        send(
+            user.getEmail(),
+            "Address Removed",
+            "Hello " + user.getFirstName() + ",\n\n" +
+            "Your address has been removed from your LMS account.\n\n" +
+            "- LMS Team"
+        );
+    }
+    
+    @Override
+    public void sendParentStudentMappingMailToParent(User parent, User student) {
+
+        String subject = "Student Linked to Your Account";
+
+        String body =
+                "Hello " + parent.getFirstName() + ",\n\n" +
+                "The following student has been successfully linked to your account:\n\n" +
+                "Student Name: " + student.getFirstName() + " " + student.getLastName() + "\n" +
+                "Student Email: " + student.getEmail() + "\n\n" +
+                "If you did not request this change, please contact support immediately.\n\n" +
+                "- LMS Team";
+
+        send(parent.getEmail(), subject, body);
+    }
+
+    @Override
+    public void sendParentStudentMappingMailToStudent(User student, User parent) {
+
+        String subject = "Parent Linked to Your Account";
+
+        String body =
+                "Hello " + student.getFirstName() + ",\n\n" +
+                "A parent has been linked to your LMS account:\n\n" +
+                "Parent Name: " + parent.getFirstName() + " " + parent.getLastName() + "\n" +
+                "Parent Email: " + parent.getEmail() + "\n\n" +
+                "If this is unexpected, please inform your administrator.\n\n" +
+                "- LMS Team";
+
+        send(student.getEmail(), subject, body);
+    }
+
 }

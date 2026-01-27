@@ -10,42 +10,66 @@ import com.lms.www.service.PasswordResetService;
 
 import jakarta.servlet.http.HttpServletRequest;
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/auth/password-reset")
 public class PasswordResetController {
 
-    private final PasswordResetService passwordResetService;
+    private final PasswordResetService service;
 
-    public PasswordResetController(PasswordResetService passwordResetService) {
-        this.passwordResetService = passwordResetService;
+    public PasswordResetController(PasswordResetService service) {
+        this.service = service;
     }
 
-    @PostMapping("/reset-password")
+    // 1️⃣ REQUEST OTP
+    @PostMapping("/request-otp")
+    public ResponseEntity<String> requestOtp(
+            @RequestBody(required = false) RequestOtpRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        service.requestPasswordResetOtp(request, httpRequest);
+        return ResponseEntity.ok("OTP sent to email");
+    }
+
+    // 2️⃣ VERIFY OTP
+    @PostMapping("/verify-otp")
+    public ResponseEntity<String> verifyOtp(
+            @RequestBody VerifyOtpRequest request
+    ) {
+        service.verifyPasswordResetOtp(request.getOtp());
+        return ResponseEntity.ok("OTP verified");
+    }
+
+    // 3️⃣ CONFIRM PASSWORD
+    @PostMapping("/confirm")
     public ResponseEntity<String> resetPassword(
             @RequestBody ResetPasswordRequest request,
             HttpServletRequest httpRequest
     ) {
-        passwordResetService.resetPassword(
-                request.getUserId(),
+        service.confirmPasswordReset(
                 request.getNewPassword(),
+                request.getConfirmPassword(),
                 httpRequest.getRemoteAddr()
         );
         return ResponseEntity.ok("Password reset successful");
     }
 
-    static class ResetPasswordRequest {
-        private Long userId;
-        private String newPassword;
-
-        public Long getUserId() {
-            return userId;
-        }
-
-        public String getNewPassword() {
-            return newPassword;
-        }
+    // DTOs
+    public static class RequestOtpRequest {
+        private String email;
+        public String getEmail() { return email; }
     }
-    
 
+    static class VerifyOtpRequest {
+        private String otp;
+        public String getOtp() { return otp; }
+    }
+
+    static class ResetPasswordRequest {
+        private String newPassword;
+        private String confirmPassword;
+        public String getNewPassword() { return newPassword; }
+        public String getConfirmPassword() { return confirmPassword; }
+    }
 }
+
 
 

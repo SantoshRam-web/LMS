@@ -1,144 +1,148 @@
 package com.lms.www.service.Impl;
 
 import java.time.LocalDateTime;
+import java.util.Random;
 
-import org.springframework.context.ApplicationContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.lms.www.config.UserAuthorizationUtil;
-import com.lms.www.model.AuditLog;
-import com.lms.www.model.PasswordResetTokens;
-import com.lms.www.model.SystemSettings;
+import com.lms.www.config.JwtUtil;
+import com.lms.www.controller.PasswordResetController;
+import com.lms.www.model.OtpVerification;
 import com.lms.www.model.User;
-import com.lms.www.repository.AuditLogRepository;
-import com.lms.www.repository.PasswordResetTokenRepository;
+import com.lms.www.repository.OtpVerificationRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.service.EmailService;
 import com.lms.www.service.PasswordResetService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Service
 @Transactional
 public class PasswordResetServiceImpl implements PasswordResetService {
 
     private final UserRepository userRepository;
-    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final OtpVerificationRepository otpRepo;
     private final SystemSettingsRepository systemSettingsRepository;
-    private final AuditLogRepository auditLogRepository;
     private final PasswordEncoder passwordEncoder;
-    private final ApplicationContext applicationContext;
     private final EmailService emailService;
+    private final JwtUtil jwtUtil;
 
     public PasswordResetServiceImpl(
             UserRepository userRepository,
-            PasswordResetTokenRepository passwordResetTokenRepository,
+            OtpVerificationRepository otpRepo,
             SystemSettingsRepository systemSettingsRepository,
-            AuditLogRepository auditLogRepository,
             PasswordEncoder passwordEncoder,
-            ApplicationContext applicationContext,
-            EmailService emailService
+            EmailService emailService,
+            JwtUtil jwtUtil
     ) {
         this.userRepository = userRepository;
-        this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.otpRepo = otpRepo;
         this.systemSettingsRepository = systemSettingsRepository;
-        this.auditLogRepository = auditLogRepository;
         this.passwordEncoder = passwordEncoder;
-        this.applicationContext = applicationContext;
         this.emailService = emailService;
+        this.jwtUtil = jwtUtil;
     }
 
+    // 1️⃣ REQUEST OTP
     @Override
-    public void resetPassword(Long userId, String newPassword, String ipAddress) {
-    	
-    	String requesterEmail = SecurityContextHolder
-    	        .getContext()
-    	        .getAuthentication()
-    	        .getName();
+    public void requestPasswordResetOtp(
+            PasswordResetController.RequestOtpRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String email;
 
-    	User requester = userRepository.findByEmail(requesterEmail)
-    	        .orElseThrow(() -> new RuntimeException("Requester not found"));
-
-    	User targetUser = userRepository.findById(userId)
-    	        .orElseThrow(() -> new RuntimeException("User not found"));
-
-    	// 🔒 BLOCK NON-SUPER-ADMIN FROM RESETTING SUPER-ADMIN PASSWORD
-    	UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
-    	        requester,
-    	        targetUser
-    	);
-
-
-        SystemSettings settings = systemSettingsRepository
-                .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("System settings not found"));
-
-        try {
-            if (newPassword.length() < settings.getPassLength()) {
-                throw new RuntimeException(
-                        "Password must be at least " + settings.getPassLength() + " characters"
-                );
+        String auth = httpRequest.getHeader("Authorization");
+        if (auth != null && auth.startsWith("Bearer ")) {
+            email = jwtUtil.extractEmail(auth.substring(7));
+        } else {
+            if (request == null || request.getEmail() == null) {
+                throw new RuntimeException("Email required");
             }
-
-            
-            // 🔐 update password
-            targetUser.setPassword(passwordEncoder.encode(newPassword));
-            userRepository.save(targetUser);
-            
-            emailService.sendPasswordResetMail(targetUser, LocalDateTime.now());
-
-
-            // 🔑 reset expiry timer
-            settings.setPasswordLastUpdatedAt(LocalDateTime.now());
-            settings.setUpdatedTime(LocalDateTime.now());
-            settings.setEnableAuditLog(true);   // ✅ SUCCESS
-            systemSettingsRepository.save(settings);
-
-            // 🧾 password reset token
-            PasswordResetTokens token = new PasswordResetTokens();
-            token.setUser(targetUser);
-            token.setResetToken("MANUAL_RESET_" + System.currentTimeMillis());
-            token.setCreatedTime(LocalDateTime.now());
-            passwordResetTokenRepository.save(token);
-            
-            emailService.sendRegistrationMail(targetUser, "PASSWORD RESET");
-
-
-            // ✅ audit log
-            AuditLog log = new AuditLog();
-            log.setAction("PASSWORD_RESET");
-            log.setEntityName("USER");
-            log.setEntityId(targetUser.getUserId());
-            log.setUserId(targetUser.getUserId());
-            log.setCreatedTime(LocalDateTime.now());
-            log.setIpAddress(ipAddress);
-            auditLogRepository.save(log);
-
-        } catch (RuntimeException ex) {
-
-            // ❌ FAILURE — MUST COMMIT
-            proxy().markAuditFailure(userId);
-
-            throw ex;
+            email = request.getEmail();
         }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        String otp = String.valueOf(100000 + new Random().nextInt(900000));
+
+        OtpVerification entity = new OtpVerification();
+        entity.setEmail(email);
+        entity.setOtp(otp);
+        entity.setPurpose("PASSWORD_RESET");
+        entity.setVerified(false);
+        entity.setAttempts(0);
+        entity.setMaxAttempts(3);
+        entity.setExpiresAt(LocalDateTime.now().plusMinutes(10));
+        entity.setCreatedAt(LocalDateTime.now());
+
+        otpRepo.save(entity);
+        emailService.sendOtpMail(email, otp);
     }
 
-    // 🔴 FAILURE MUST RUN IN NEW TRANSACTION
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void markAuditFailure(Long userId) {
+    // 2️⃣ VERIFY OTP
+    @Override
+    public void verifyPasswordResetOtp(String otp) {
 
-        SystemSettings settings = systemSettingsRepository
-                .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("System settings not found"));
+        OtpVerification entity = otpRepo
+                .findAll()
+                .stream()
+                .filter(o ->
+                        "PASSWORD_RESET".equals(o.getPurpose())
+                        && Boolean.FALSE.equals(o.getVerified())
+                        && o.getOtp().equals(otp)
+                )
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Invalid OTP"));
 
-        settings.setEnableAuditLog(false);
-        systemSettingsRepository.save(settings);
+        if (LocalDateTime.now().isAfter(entity.getExpiresAt())) {
+            throw new RuntimeException("OTP expired");
+        }
+
+        entity.setVerified(true);
+        otpRepo.save(entity);
     }
 
-    private PasswordResetServiceImpl proxy() {
-        return applicationContext.getBean(PasswordResetServiceImpl.class);
+    // 3️⃣ CONFIRM PASSWORD
+    @Override
+    public void confirmPasswordReset(
+            String newPassword,
+            String confirmPassword,
+            String ipAddress
+    ) {
+        if (!newPassword.equals(confirmPassword)) {
+            throw new RuntimeException("Passwords do not match");
+        }
+
+        OtpVerification otp = otpRepo
+                .findAll()
+                .stream()
+                .filter(o ->
+                        "PASSWORD_RESET".equals(o.getPurpose())
+                        && Boolean.TRUE.equals(o.getVerified())
+                )
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("OTP not verified"));
+
+        User user = userRepository.findByEmail(otp.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        systemSettingsRepository.findByUserId(user.getUserId())
+                .ifPresent(s -> {
+                    s.setPasswordLastUpdatedAt(LocalDateTime.now());
+                    systemSettingsRepository.save(s);
+                });
+
+        // 🔥 SINGLE-USE OTP
+        otpRepo.delete(otp);
+       
+
     }
 }
+

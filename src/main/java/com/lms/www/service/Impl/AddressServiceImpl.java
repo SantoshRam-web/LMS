@@ -13,6 +13,7 @@ import com.lms.www.repository.AddressRepository;
 import com.lms.www.repository.AuditLogRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.service.AddressService;
+import com.lms.www.service.EmailService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -23,15 +24,19 @@ public class AddressServiceImpl implements AddressService {
     private final AddressRepository addressRepository;
     private final UserRepository userRepository;
     private final AuditLogRepository auditLogRepository;
+    private final EmailService emailService;
+
 
     public AddressServiceImpl(
             AddressRepository addressRepository,
             UserRepository userRepository,
-            AuditLogRepository auditLogRepository
+            AuditLogRepository auditLogRepository,
+            EmailService emailService
     ) {
         this.addressRepository = addressRepository;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
+        this.emailService = emailService;
     }
 
     @Override
@@ -53,6 +58,9 @@ public class AddressServiceImpl implements AddressService {
         Address saved = addressRepository.save(address);
 
         audit("CREATE", saved.getAddressId(), admin, request);
+        
+        emailService.sendAddressAddedMail(user);
+        
         return saved;
     }
 
@@ -99,6 +107,9 @@ public class AddressServiceImpl implements AddressService {
             existing.setDNo(newAddress.getDNo());
 
         audit("UPDATE", existing.getAddressId(), admin, request);
+        
+        emailService.sendAddressUpdatedMail(existing.getUser());
+        
         return existing;
     }
 
@@ -118,6 +129,9 @@ public class AddressServiceImpl implements AddressService {
         addressRepository.delete(address); // 🔴 REAL DELETE
 
         audit("DELETE", address.getAddressId(), admin, request);
+        
+        emailService.sendAddressDeletedMail(address.getUser());
+
     }
 
     private void audit(String action, Long entityId, User admin, HttpServletRequest request) {
