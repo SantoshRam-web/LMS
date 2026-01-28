@@ -40,7 +40,8 @@ public class SecurityConfig {
             	    .requestMatchers("/super-admin/**").hasAuthority("ROLE_SUPER_ADMIN")
 
             	    // 🔐 ADMIN
-            	    .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
+            	    .requestMatchers("/admin/**")
+            	    .hasAnyAuthority("ROLE_ADMIN","ROLE_SUPER_ADMIN")
 
             	    // 🔐 STUDENT
             	    .requestMatchers("/student/**").hasAuthority("ROLE_STUDENT")

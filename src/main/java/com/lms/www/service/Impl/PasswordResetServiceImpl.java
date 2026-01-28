@@ -132,6 +132,11 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+        
+        emailService.sendPasswordResetSuccessMail(
+                user.getEmail(),
+                LocalDateTime.now()
+        );
 
         systemSettingsRepository.findByUserId(user.getUserId())
                 .ifPresent(s -> {

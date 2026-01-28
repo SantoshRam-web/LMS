@@ -13,8 +13,6 @@ public interface EmailService {
 
     void sendUserUpdatedMail(User user, String updatedFields, LocalDateTime time);
 
-    void sendAccountStatusMail(User user, boolean enabled, LocalDateTime time);
-
     void sendRelationMappingMail(User parent, User student, LocalDateTime time);
 
     // AUTH
@@ -22,7 +20,11 @@ public interface EmailService {
 
     void sendLoginFailedMail(String email, String ipAddress, String userAgent,LocalDateTime time);
 
-    void sendPasswordResetMail(User user, LocalDateTime time);
+    void sendPasswordResetSuccessMail(
+            String email,
+            java.time.LocalDateTime resetTime
+    );
+
     
     void sendAccountDeletionMail(User user);
     
@@ -43,8 +45,6 @@ public interface EmailService {
     );
 
     void sendMultiSessionStatusMail(User user, boolean enabled);
-
-    void sendAccountStatusMail(User user, boolean enabled);
     
     void sendProfileUpdatedMail(User user);
     
@@ -54,5 +54,8 @@ public interface EmailService {
     
     void sendParentStudentMappingMailToParent(User parent, User student);
     void sendParentStudentMappingMailToStudent(User student, User parent);
+    
+    void sendAccountStatusMail(User user, String status);
+
 
 }

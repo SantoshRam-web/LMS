@@ -76,15 +76,6 @@ public class AdminController {
         return ResponseEntity.ok(adminService.getUserByUserId(userId));
     }
 
-    // ---------- DELETE ----------
-    @DeleteMapping("/users/{userId}")
-    public ResponseEntity<String> deleteUser(
-            @PathVariable Long userId,
-            HttpServletRequest request
-    ) {
-        adminService.deleteUser(userId, getLoggedInUser(), request);
-        return ResponseEntity.ok("User deleted successfully");
-    }
 
     // ---------- HELPER ----------
     private User getLoggedInUser() {
@@ -235,7 +226,13 @@ public class AdminController {
             return multiSession;
         }
     }
-
+    
+    @DeleteMapping("/users/{userId}")
+    public ResponseEntity<String> deleteUserBlocked() {
+        throw new RuntimeException(
+                "User deletion is not allowed. Use enable/disable instead."
+        );
+    }
 
 
 }

@@ -310,49 +310,10 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void deleteUser(Long userId, User requester, HttpServletRequest request) {
-        try {
-        	User targetUser = getUserByUserId(userId);
-
-        	// 🔒 BLOCK ADMIN → SUPER ADMIN
-        	UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
-        	        requester,
-        	        targetUser
-        	);
-
-
-            // ✅ PROCEED WITH NORMAL DELETE FLOW
-            userSessionRepository.deleteByUser_UserId(userId);
-            addressRepository.deleteByUser_UserId(userId);
-
-            parentStudentRelationRepository.deleteByStudent_User_UserId(userId);
-            parentStudentRelationRepository.deleteByParent_User_UserId(userId);
-
-            studentRepository.findByUser(targetUser)
-                    .forEach(studentRepository::delete);
-
-            instructorRepository.findByUser(targetUser)
-                    .forEach(instructorRepository::delete);
-
-            parentRepository.deleteByUser_UserId(userId);
-
-            loginHistoryRepository.deleteByUser(targetUser);
-            passwordResetTokenRepository.deleteByUser(targetUser);
-            auditLogRepository.deleteByUserId(userId);
-
-            systemSettingsRepository.findByUserId(userId)
-                    .ifPresent(systemSettingsRepository::delete);
-
-            userRepository.delete(targetUser);
-
-            proxy().markAuditStatus(requester.getUserId(), true);
-            audit("DELETE", "USER", userId, requester, request);
-
-        } catch (RuntimeException ex) {
-            proxy().markAuditStatus(requester.getUserId(), false);
-            throw ex;
-        }
+        throw new RuntimeException(
+                "User deletion is not possible. Use account enable/disable instead."
+        );
     }
-
 
     @Override
     public void mapParentToStudent(Long parentId, Long studentId, User admin, HttpServletRequest request) {
@@ -405,46 +366,49 @@ public class AdminServiceImpl implements AdminService {
     public void setUserEnabled(
             Long userId,
             boolean enabled,
-            User admin,
+            User requester,
             HttpServletRequest request
     ) {
         try {
-            // 1️⃣ Fetch user
-            User user = getUserByUserId(userId);
-            
-         // 🔒 BLOCK ADMIN → SUPER ADMIN
-            UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
-                    admin,
-                    user
+            User targetUser = getUserByUserId(userId);
+
+            // 🔒 RULE 1: ADMIN cannot touch SUPER_ADMIN
+            if ("ROLE_ADMIN".equals(requester.getRoleName())
+                    && "ROLE_SUPER_ADMIN".equals(targetUser.getRoleName())) {
+                throw new RuntimeException("Admin cannot modify Super Admin");
+            }
+
+            // 🔒 RULE 2: NO ONE can disable SUPER_ADMIN
+            if (!enabled && "ROLE_SUPER_ADMIN".equals(targetUser.getRoleName())) {
+                throw new RuntimeException("Super Admin cannot be disabled");
+            }
+
+            // ✅ UPDATE STATUS
+            targetUser.setEnabled(enabled);
+            userRepository.save(targetUser);
+
+            // 📧 EMAIL
+            emailService.sendAccountStatusMail(
+                    targetUser,
+                    enabled ? "ACCOUNT ENABLED" : "ACCOUNT DISABLED"
             );
 
-
-            // 2️⃣ Enable / Disable
-            user.setEnabled(enabled);
-            userRepository.save(user);
-
-            emailService.sendAccountStatusMail(user, enabled);
-
-            // 4️⃣ Mark audit success (ADMIN)
-            proxy().markAuditStatus(admin.getUserId(), true);
-
-            // 5️⃣ Audit log
+            // ✅ AUDIT
+            proxy().markAuditStatus(requester.getUserId(), true);
             audit(
                     enabled ? "ENABLE" : "DISABLE",
                     "USER",
                     userId,
-                    admin,
+                    requester,
                     request
             );
 
         } catch (RuntimeException ex) {
-
-            // ❌ Mark audit failure
-            proxy().markAuditStatus(admin.getUserId(), false);
-
+            proxy().markAuditStatus(requester.getUserId(), false);
             throw ex;
         }
     }
+
     
     @Override
     public void updateMultiSessionAccess(

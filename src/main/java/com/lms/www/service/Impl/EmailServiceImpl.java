@@ -20,18 +20,26 @@ public class EmailServiceImpl implements EmailService {
 
     // ================= ACCOUNT CREATION =================
     @Override
-    public void sendAccountCredentialsMail(User user, String rawPassword) {
-        send(
-            user.getEmail(),
-            "Your LMS Login Credentials",
-            "Hello " + user.getFirstName() + ",\n\n" +
-            "Your LMS account has been created.\n\n" +
-            "Login Email: " + user.getEmail() + "\n" +
-            "Password: " + rawPassword + "\n\n" +
-            "Please change your password after first login.\n\n" +
-            "- LMS Team"
-        );
+    public void sendAccountCredentialsMail(
+            User user,
+            String rawPassword
+    ) {
+
+        String subject = "Your LMS Account Has Been Created";
+
+        String body =
+                "Hello " + user.getFirstName() + ",\n\n" +
+                "Your LMS account has been successfully created.\n\n" +
+                "Login Details:\n" +
+                "Email: " + user.getEmail() + "\n" +
+                "Password: " + rawPassword + "\n\n" +
+                "Please change your password after first login.\n\n" +
+                "Regards,\n" +
+                "LMS Team";
+
+        send(user.getEmail(), subject, body);
     }
+
 
     @Override
     public void sendRegistrationMail(User user, String role) {
@@ -59,17 +67,6 @@ public class EmailServiceImpl implements EmailService {
         );
     }
 
-    @Override
-    public void sendAccountStatusMail(User user, boolean enabled, LocalDateTime time) {
-        send(
-            user.getEmail(),
-            "Account Status Changed",
-            "Hello " + user.getFirstName() + ",\n\n" +
-            "Your account has been " + (enabled ? "ENABLED" : "DISABLED") + ".\n\n" +
-            "Time: " + time + "\n\n" +
-            "- LMS Admin"
-        );
-    }
 
     @Override
     public void sendRelationMappingMail(User parent, User student, LocalDateTime time) {
@@ -119,13 +116,23 @@ public class EmailServiceImpl implements EmailService {
 
 
     @Override
-    public void sendPasswordResetMail(User user, LocalDateTime time) {
-        send(
-            user.getEmail(),
-            "Password Reset",
-            "Your password was reset successfully.\n\nTime: " + time
-        );
+    public void sendPasswordResetSuccessMail(
+            String email,
+            LocalDateTime resetTime
+    ) {
+        String subject = "Your LMS password has been changed";
+
+        String body =
+                "Hi,\n\n" +
+                "Your LMS account password was successfully changed.\n\n" +
+                "🕒 Time: " + resetTime + "\n\n" +
+                "If you did NOT perform this action, please reset your password immediately or contact support.\n\n" +
+                "Regards,\n" +
+                "LMS Security Team";
+
+        send(email, subject, body);
     }
+
     
 
     // ================= COMMON =================
@@ -259,25 +266,6 @@ public class EmailServiceImpl implements EmailService {
         send(user.getEmail(), subject, body);
     }
     
-    @Override
-    public void sendAccountStatusMail(User user, boolean enabled) {
-
-        String subject = enabled
-                ? "Your LMS Account Has Been Enabled"
-                : "Your LMS Account Has Been Disabled";
-
-        String body =
-                "Hello " + user.getFirstName() + ",\n\n" +
-                "Your LMS account has been " +
-                (enabled ? "ENABLED" : "DISABLED") + ".\n\n" +
-                (enabled
-                        ? "You can now log in and continue using the platform."
-                        : "Please contact the administrator if you believe this is a mistake."
-                ) +
-                "\n\n- LMS Team";
-
-        send(user.getEmail(), subject, body);
-    }
     
     @Override
     public void sendProfileUpdatedMail(User user) {
@@ -358,6 +346,34 @@ public class EmailServiceImpl implements EmailService {
                 "- LMS Team";
 
         send(student.getEmail(), subject, body);
+    }
+    
+    @Override
+    public void sendAccountStatusMail(User user, String status) {
+
+        String subject = "LMS Account Status Update";
+
+        String message = """
+                Hello %s,
+
+                Your LMS account status has been updated.
+
+                Current Status: %s
+
+                If you believe this was done by mistake, please contact support.
+
+                Regards,
+                LMS Team
+                """.formatted(
+                        user.getFirstName(),
+                        status
+                );
+
+        send(
+                user.getEmail(),
+                subject,
+                message
+        );
     }
 
 }

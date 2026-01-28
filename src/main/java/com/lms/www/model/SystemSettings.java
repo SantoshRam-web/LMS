@@ -61,5 +61,6 @@ public class SystemSettings {
     // ---------- META ----------
     @Column(name = "updated_time")
     private LocalDateTime updatedTime;
+    
 }
 
