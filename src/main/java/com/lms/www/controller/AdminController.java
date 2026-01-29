@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lms.www.controller.request.ConductorRequest;
+import com.lms.www.controller.request.DriverRequest;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
@@ -63,6 +65,24 @@ public class AdminController {
     ) {
         adminService.createParent(request, getLoggedInUser(), httpRequest);
         return ResponseEntity.ok("Parent created successfully");
+    }
+    
+    @PostMapping("/drivers")
+    public ResponseEntity<String> createDriver(
+            @RequestBody DriverRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createDriver(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Driver created successfully");
+    }
+    
+    @PostMapping("/conductors")
+    public ResponseEntity<String> createConductor(
+            @RequestBody ConductorRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createConductor(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Conductor created successfully");
     }
 
     // ---------- READ ----------
@@ -128,6 +148,28 @@ public class AdminController {
     @GetMapping("/getinstructors/{instructorId}")
     public ResponseEntity<?> getInstructorById(@PathVariable Long instructorId) {
         return ResponseEntity.ok(adminService.getInstructorByInstructorId(instructorId));
+    }
+    
+    // ---------- DRIVERS ----------
+    @GetMapping("/getdrivers")
+    public ResponseEntity<?> getAllDrivers() {
+        return ResponseEntity.ok(adminService.getAllDrivers());
+    }
+
+    @GetMapping("/getdrivers/{driverId}")
+    public ResponseEntity<?> getDriverById(@PathVariable Long driverId) {
+        return ResponseEntity.ok(adminService.getDriverByDriverId(driverId));
+    }
+    
+    // ---------- CONDUCTORS ----------
+    @GetMapping("/getconductors")
+    public ResponseEntity<?> getAllConductors() {
+        return ResponseEntity.ok(adminService.getAllConductors());
+    }
+
+    @GetMapping("/getconductors/{conductorId}")
+    public ResponseEntity<?> getConductorById(@PathVariable Long conductorId) {
+        return ResponseEntity.ok(adminService.getConductorByConductorId(conductorId));
     }
 
     // ---------- MAP ----------

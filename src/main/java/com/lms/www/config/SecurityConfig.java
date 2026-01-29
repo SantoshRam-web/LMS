@@ -51,6 +51,12 @@ public class SecurityConfig {
 
             	    // 🔐 PARENT
             	    .requestMatchers("/parent/**").hasAuthority("ROLE_PARENT")
+            	    
+            	     // 🔐 PARENT
+            	    .requestMatchers("/driver/**").hasAuthority("ROLE_DRIVER")
+            	    
+            	     // 🔐 PARENT
+            	    .requestMatchers("/conductor/**").hasAuthority("ROLE_CONDUCTOR")
 
             	    // 🔐 SELF
             	    .requestMatchers("/me/**").authenticated()

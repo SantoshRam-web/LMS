@@ -10,10 +10,14 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.config.UserAuthorizationUtil;
+import com.lms.www.controller.request.ConductorRequest;
+import com.lms.www.controller.request.DriverRequest;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
 import com.lms.www.model.AuditLog;
+import com.lms.www.model.Conductor;
+import com.lms.www.model.Driver;
 import com.lms.www.model.Instructor;
 import com.lms.www.model.Parent;
 import com.lms.www.model.ParentStudentRelation;
@@ -22,6 +26,8 @@ import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.repository.AddressRepository;
 import com.lms.www.repository.AuditLogRepository;
+import com.lms.www.repository.ConductorRepository;
+import com.lms.www.repository.DriverRepository;
 import com.lms.www.repository.InstructorRepository;
 import com.lms.www.repository.LoginHistoryRepository;
 import com.lms.www.repository.ParentRepository;
@@ -54,7 +60,8 @@ public class AdminServiceImpl implements AdminService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final AddressRepository addressRepository;
     private final UserSessionRepository userSessionRepository;
-
+    private final DriverRepository driverRepository;
+    private final ConductorRepository conductorRepository;
 
 
     public AdminServiceImpl(
@@ -71,7 +78,9 @@ public class AdminServiceImpl implements AdminService {
             PasswordResetTokenRepository passwordResetTokenRepository,
             ApplicationContext applicationContext,
             AddressRepository addressRepository,
-            UserSessionRepository userSessionRepository
+            UserSessionRepository userSessionRepository,
+            DriverRepository driverRepository,
+            ConductorRepository conductorRepository
     ) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -87,6 +96,8 @@ public class AdminServiceImpl implements AdminService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.addressRepository = addressRepository;
         this.userSessionRepository = userSessionRepository;
+        this.driverRepository = driverRepository;
+        this.conductorRepository = conductorRepository;
     }
 
     // ===================== COMMON =====================
@@ -242,6 +253,58 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
+    
+    @Override
+    public void createDriver(DriverRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName()
+            );
+
+            Driver driver = new Driver();
+            driver.setUser(user);
+            driverRepository.save(driver);
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "DRIVER", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createConductor(ConductorRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName()
+            );
+
+            Conductor conductor = new Conductor();
+            conductor.setUser(user);
+            conductorRepository.save(conductor);
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "CONDUCTOR", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
 
     // ===================== READ =====================
     @Override public List<User> getAllUsers() { return userRepository.findAll(); }
@@ -256,6 +319,8 @@ public class AdminServiceImpl implements AdminService {
     @Override public List<Student> getAllStudents() { return studentRepository.findAll(); }
     @Override public List<Parent> getAllParents() { return parentRepository.findAll(); }
     @Override public List<Instructor> getAllInstructors() { return instructorRepository.findAll(); }
+    @Override public List<Driver> getAllDrivers() { return driverRepository.findAll(); }
+    @Override public List<Conductor> getAllConductors() { return conductorRepository.findAll(); }
     
     @Override
     public Student getStudentByStudentId(Long studentId) {
@@ -279,7 +344,19 @@ public class AdminServiceImpl implements AdminService {
     public Instructor getInstructorByInstructorId(Long instructorId) {
         return instructorRepository.findById(instructorId)
                 .orElseThrow(() -> new RuntimeException("Instructor not found"));
-    }                                                                                                                                             
+    }    
+    
+    @Override
+    public Driver getDriverByDriverId(Long driverId) {
+        return driverRepository.findById(driverId)
+                .orElseThrow(() -> new RuntimeException("Driver not found"));
+    }  
+    
+    @Override
+    public Conductor getConductorByConductorId(Long conductorId) {
+        return conductorRepository.findById(conductorId)
+                .orElseThrow(() -> new RuntimeException("Conductor not found"));
+    }  
 
     // ===================== UPDATE / DELETE =====================
     @Override
