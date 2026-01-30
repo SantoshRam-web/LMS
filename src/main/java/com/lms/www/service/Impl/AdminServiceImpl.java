@@ -107,7 +107,8 @@ public class AdminServiceImpl implements AdminService {
             String email,
             String password,
             String phone,
-            String roleName
+            String roleName,
+            User admin
     ) {
 
         if (userRepository.existsByEmail(email)) {
@@ -127,6 +128,13 @@ public class AdminServiceImpl implements AdminService {
         user.setPhone(phone);
         user.setEnabled(true);
         user.setRoleName(roleName);
+        
+        if (admin.getRoleName().equals("SUPER_ADMIN")) {
+            user.setCreatedBySuperAdminId(admin.getUserId());
+        } else {
+            user.setCreatedBySuperAdminId(admin.getCreatedBySuperAdminId());
+        }
+
         
         if (userRepository.existsByPhone(phone)) {
             throw new RuntimeException("Phone number already in use");
@@ -183,7 +191,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getEmail(),
                     request.getPassword(),
                     request.getPhone(),
-                    request.getRoleName()
+                    request.getRoleName(),
+                    admin
             );
 
             Student student = new Student();
@@ -211,7 +220,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getEmail(),
                     request.getPassword(),
                     request.getPhone(),
-                    request.getRoleName()
+                    request.getRoleName(),
+                    admin
             );
 
             Instructor instructor = new Instructor();
@@ -237,7 +247,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getEmail(),
                     request.getPassword(),
                     request.getPhone(),
-                    request.getRoleName()
+                    request.getRoleName(),
+                    admin
             );
 
             Parent parent = new Parent();
@@ -263,7 +274,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getEmail(),
                     request.getPassword(),
                     request.getPhone(),
-                    request.getRoleName()
+                    request.getRoleName(),
+                    admin
             );
 
             Driver driver = new Driver();
@@ -289,7 +301,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getEmail(),
                     request.getPassword(),
                     request.getPhone(),
-                    request.getRoleName()
+                    request.getRoleName(),
+                    admin
             );
 
             Conductor conductor = new Conductor();

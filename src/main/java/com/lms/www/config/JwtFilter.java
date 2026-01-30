@@ -18,6 +18,7 @@ import com.lms.www.model.UserSession;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
+import com.lms.www.tenant.TenantContext;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -58,100 +59,112 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        String header = request.getHeader("Authorization");
-
-        if (header == null || !header.startsWith("Bearer ")) {
-            filterChain.doFilter(request, response);
-            return;
-        }
-
-        String token = header.substring(7);
-
         try {
-            jwtUtil.validateToken(token);
-        } catch (Exception ex) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
+            String header = request.getHeader("Authorization");
 
-        String email = jwtUtil.extractEmail(token);
+            if (header == null || !header.startsWith("Bearer ")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
 
-        User user = userRepository.findByEmail(email).orElse(null);
-        if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
-            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-            return;
-        }
+            String token = header.substring(7);
 
-        UserSession session = userSessionRepository
-                .findByTokenAndLogoutTimeIsNull(token)
-                .orElse(null);
-
-        if (session == null) {
-            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            return;
-        }
-
-        // ---------- SESSION TIMEOUT ----------
-        SystemSettings settings = systemSettingsRepository
-                .findByUserId(user.getUserId())
-                .orElse(null);
-
-        if (settings != null && settings.getSessionTimeout() != null) {
-
-            LocalDateTime lastActivity =
-                    session.getLastActivityTime() != null
-                            ? session.getLastActivityTime()
-                            : session.getLoginTime();
-
-            long idleMinutes = ChronoUnit.MINUTES.between(
-                    lastActivity,
-                    LocalDateTime.now()
-            );
-
-            if (idleMinutes >= settings.getSessionTimeout()) {
-                session.setLogoutTime(LocalDateTime.now());
-                userSessionRepository.save(session);
+            try {
+                jwtUtil.validateToken(token);
+            } catch (Exception ex) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
-        }
 
-        // ---------- UPDATE ACTIVITY ----------
-        session.setLastActivityTime(LocalDateTime.now());
-        userSessionRepository.save(session);
+            String email = jwtUtil.extractEmail(token);
 
-        // ---------- AUTHORITIES ----------
-        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-
-        // Roles
-        List<String> roles = jwtUtil.extractRoles(token);
-        if (roles != null) {
-            for (String role : roles) {
-                if (!role.startsWith("ROLE_")) {
-                    role = "ROLE_" + role;
-                }
-                authorities.add(new SimpleGrantedAuthority(role));
+            User user = userRepository.findByEmail(email).orElse(null);
+            if (user == null || Boolean.FALSE.equals(user.getEnabled())) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                return;
             }
-        }
 
-        // Permissions
-        List<String> permissions = jwtUtil.extractPermissions(token);
-        if (permissions != null) {
-            for (String perm : permissions) {
-                authorities.add(new SimpleGrantedAuthority(perm));
+            UserSession session = userSessionRepository
+                    .findByTokenAndLogoutTimeIsNull(token)
+                    .orElse(null);
+
+            if (session == null) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
             }
-        }
 
-        // ---------- AUTH CONTEXT ----------
-        UsernamePasswordAuthenticationToken authentication =
-                new UsernamePasswordAuthenticationToken(
-                        user.getEmail(),
-                        null,
-                        authorities
+            // 🔑 TENANT EXTRACTION
+            String tenantDb = jwtUtil.extractTenantDb(token);
+            if (tenantDb == null) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+
+            TenantContext.setTenant(jwtUtil.extractTenantDb(token));
+
+            // ---------- SESSION TIMEOUT ----------
+            SystemSettings settings = systemSettingsRepository
+                    .findByUserId(user.getUserId())
+                    .orElse(null);
+
+            if (settings != null && settings.getSessionTimeout() != null) {
+
+                LocalDateTime lastActivity =
+                        session.getLastActivityTime() != null
+                                ? session.getLastActivityTime()
+                                : session.getLoginTime();
+
+                long idleMinutes = ChronoUnit.MINUTES.between(
+                        lastActivity,
+                        LocalDateTime.now()
                 );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+                if (idleMinutes >= settings.getSessionTimeout()) {
+                    session.setLogoutTime(LocalDateTime.now());
+                    userSessionRepository.save(session);
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    return;
+                }
+            }
 
-        filterChain.doFilter(request, response);
+            // ---------- UPDATE ACTIVITY ----------
+            session.setLastActivityTime(LocalDateTime.now());
+            userSessionRepository.save(session);
+
+            // ---------- AUTHORITIES ----------
+            List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+
+            List<String> roles = jwtUtil.extractRoles(token);
+            if (roles != null) {
+                for (String role : roles) {
+                    if (!role.startsWith("ROLE_")) {
+                        role = "ROLE_" + role;
+                    }
+                    authorities.add(new SimpleGrantedAuthority(role));
+                }
+            }
+
+            List<String> permissions = jwtUtil.extractPermissions(token);
+            if (permissions != null) {
+                for (String perm : permissions) {
+                    authorities.add(new SimpleGrantedAuthority(perm));
+                }
+            }
+
+            UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(
+                            user.getEmail(),
+                            null,
+                            authorities
+                    );
+
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            filterChain.doFilter(request, response);
+
+        } finally {
+            // 🔥 CRITICAL: prevent tenant leakage across requests
+            TenantContext.clear();
+        }
     }
 }

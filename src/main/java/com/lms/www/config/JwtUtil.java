@@ -31,13 +31,15 @@ public class JwtUtil {
             Long userId,
             String email,
             List<String> roles,
-            List<String> permissions
+            List<String> permissions,
+            String tenantDb
     ) {
         return Jwts.builder()
                 .setSubject(email)
                 .claim("userId", userId)
                 .claim("roles", roles)
                 .claim("permissions", permissions)
+                .claim("tenantDb", tenantDb)
                 .setIssuedAt(new Date())
                 // ❌ NO expiration
                 .signWith(key)
@@ -74,5 +76,10 @@ public class JwtUtil {
         extractClaims(token); // throws exception if invalid/expired
         return true;
     }
+    
+    public String extractTenantDb(String token) {
+        return extractClaims(token).get("tenantDb", String.class);
+    }
+
 
 }
