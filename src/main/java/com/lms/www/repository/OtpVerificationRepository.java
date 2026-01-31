@@ -19,4 +19,10 @@ public interface OtpVerificationRepository
             String email,
             String purpose
     );
+    
+    // ✅ ADD THIS
+    boolean existsByEmailAndPurpose(
+            String email,
+            String purpose
+    );
 }

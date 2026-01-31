@@ -1,25 +1,34 @@
 package com.lms.www.service.Impl;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
 import java.time.LocalDateTime;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.controller.AdminRequest;
 import com.lms.www.model.OtpVerification;
+import com.lms.www.model.SuperAdmin;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.repository.OtpVerificationRepository;
+import com.lms.www.repository.SuperAdminRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.service.EmailService;
 import com.lms.www.service.SuperAdminService;
+import com.lms.www.service.TenantUserCreationService;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+
 @Service
-@Transactional
 public class SuperAdminServiceImpl implements SuperAdminService {
 
     private final OtpVerificationRepository otpRepo;
@@ -27,46 +36,59 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final SystemSettingsRepository systemSettingsRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final JdbcTemplate jdbcTemplate;
+    private final SuperAdminRepository superAdminRepository;
+    private final TenantUserCreationService tenantUserCreationService;
+    
+    @Value("${spring.datasource.username}")
+    private String dbUser;
+
+    @Value("${spring.datasource.password}")
+    private String dbPassword;
 
     public SuperAdminServiceImpl(
             OtpVerificationRepository otpRepo,
             UserRepository userRepository,
             SystemSettingsRepository systemSettingsRepository,
             PasswordEncoder passwordEncoder,
-            EmailService emailService
+            EmailService emailService,
+            JdbcTemplate jdbcTemplate,
+            SuperAdminRepository superAdminRepository,
+            TenantUserCreationService tenantUserCreationService
     ) {
         this.otpRepo = otpRepo;
         this.userRepository = userRepository;
         this.systemSettingsRepository = systemSettingsRepository;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.jdbcTemplate = jdbcTemplate;
+        this.superAdminRepository = superAdminRepository;
+        this.tenantUserCreationService = tenantUserCreationService;
     }
-    
-    
+
     // ================= INIT SIGNUP =================
     @Override
+    @Transactional
     public void requestOtp(String email, String phone) {
-    	
-    	if (userRepository.existsByPhone(phone)) {
-    	    throw new RuntimeException("Phone number already in use");
-    	}
 
-        if (userRepository.existsByEmail(email)) {
-            throw new RuntimeException("User already exists");
+        if (superAdminRepository.existsByEmail(email)) {
+            throw new RuntimeException("Super admin already exists");
         }
 
-        String otp = String.valueOf(
-                100000 + new java.util.Random().nextInt(900000)
-        );
+        if (superAdminRepository.existsByPhone(phone)) {
+            throw new RuntimeException("Phone number already in use");
+        }
+
+        String otp = String.valueOf(100000 + new java.util.Random().nextInt(900000));
 
         OtpVerification entity =
                 otpRepo.findByEmailAndPurpose(email, "SUPER_ADMIN_SIGNUP")
-                      .orElse(new OtpVerification());
+                       .orElse(new OtpVerification());
 
         entity.setEmail(email);
         entity.setPhone(phone);
         entity.setOtp(otp);
-        entity.setPurpose("SUPER_ADMIN_SIGNUP"); // 🔥 FIX
+        entity.setPurpose("SUPER_ADMIN_SIGNUP");
         entity.setAttempts(0);
         entity.setMaxAttempts(3);
         entity.setVerified(false);
@@ -74,18 +96,16 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         entity.setCreatedAt(LocalDateTime.now());
 
         otpRepo.save(entity);
-
         emailService.sendOtpMail(email, otp);
     }
 
     // ================= VERIFY OTP =================
     @Override
+    @Transactional
     public void verifyOtp(String email, String otp) {
 
         OtpVerification entity = otpRepo
-                .findByEmailAndPurposeAndVerifiedFalse(
-                        email, "SUPER_ADMIN_SIGNUP"
-                )
+                .findByEmailAndPurposeAndVerifiedFalse(email, "SUPER_ADMIN_SIGNUP")
                 .orElseThrow(() -> new RuntimeException("OTP not found"));
 
         if (LocalDateTime.now().isAfter(entity.getExpiresAt())) {
@@ -101,8 +121,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         entity.setVerified(true);
         otpRepo.save(entity);
     }
-    
-    
 
     // ================= FINAL SIGNUP =================
     @Override
@@ -114,59 +132,89 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             String phone
     ) {
 
-        // 🔒 1️⃣ OTP MUST EXIST AND MUST BE VERIFIED
         OtpVerification otp = otpRepo
                 .findByEmailAndPurpose(email, "SUPER_ADMIN_SIGNUP")
-                .orElseThrow(() ->
-                        new RuntimeException("OTP verification required")
-                );
+                .orElseThrow(() -> new RuntimeException("OTP verification required"));
 
-        if (!Boolean.TRUE.equals(otp.getVerified())) {
+        if (!otp.getVerified()) {
             throw new RuntimeException("OTP not verified");
         }
 
-        // 🔒 2️⃣ Prevent reuse of same OTP
         otpRepo.delete(otp);
 
-        // 🔒 3️⃣ Create Super Admin user
-        User user = new User();
-        user.setEmail(email);
-        user.setPassword(passwordEncoder.encode(password));
-        user.setFirstName(firstName);
-        user.setLastName(lastName);
-        user.setPhone(phone);
-        user.setEnabled(true);
-        user.setRoleName("ROLE_SUPER_ADMIN");
+        String tenantDb = "lms_tenant_" + System.currentTimeMillis();
 
-        user = userRepository.save(user);
+        // ✅ CREATE TENANT DB FROM TEMPLATE
+        createTenantDatabaseFromTemplate(tenantDb);
 
-        // 🔒 4️⃣ Create system settings (ALL mandatory fields)
-        SystemSettings settings = new SystemSettings();
-        settings.setUserId(user.getUserId());
-        settings.setMaxLoginAttempts(5L);
-        settings.setAccLockDuration(30L);
-        settings.setPassExpiryDays(60L);
-        settings.setPassLength(10L);
-        settings.setJwtExpiryMins(60L);
-        settings.setSessionTimeout(60L);
-        settings.setMultiSession(true);
-        settings.setPasswordLastUpdatedAt(LocalDateTime.now());
-        settings.setUpdatedTime(LocalDateTime.now());
+        // ✅ REGISTER TENANT (MASTER DB)
+        jdbcTemplate.update(
+                "INSERT INTO tenant_registry (super_admin_email, tenant_db_name) VALUES (?, ?)",
+                email, tenantDb
+        );
 
-        systemSettingsRepository.save(settings);
+        // ✅ SAVE SUPER ADMIN (MASTER DB)
+        SuperAdmin sa = new SuperAdmin();
+        sa.setEmail(email);
+        sa.setPhone(phone);
+        sa.setPassword(passwordEncoder.encode(password));
+        sa.setEnabled(true);
+        superAdminRepository.save(sa);
 
-        // 🔒 5️⃣ Send credentials mail
-        String url = generateSuperAdminUrl(user.getEmail());
+        // ✅ CREATE SUPER ADMIN USER IN TENANT DB
+        tenantUserCreationService.createSuperAdminUser(
+                tenantDb,
+                email,
+                password,
+                phone
+        );
+
+        String url = generateSuperAdminUrl(email);
         emailService.sendSuperAdminCredentialsMail(email, password, url);
     }
     
+    // ================= TEMPLATE DB CLONE (FINAL, CORRECT) =================
+    private void createTenantDatabaseFromTemplate(String tenantDb) {
+
+        // 1️⃣ Create tenant DB using master connection
+        jdbcTemplate.execute(
+            "CREATE DATABASE " + tenantDb +
+            " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+        );
+
+        try {
+            // 2️⃣ Build TENANT JDBC URL (THIS IS THE KEY)
+            String masterUrl = jdbcTemplate
+                    .getDataSource()
+                    .getConnection()
+                    .getMetaData()
+                    .getURL();
+
+            String tenantUrl = masterUrl.replace("/master_db", "/" + tenantDb);
+
+            // 3️⃣ Open DIRECT connection to tenant DB
+            try (Connection tenantConn = DriverManager.getConnection(
+                    tenantUrl,
+                    dbUser,
+                    dbPassword
+            )) {
+                // 4️⃣ Execute schema INSIDE tenant DB
+                ScriptUtils.executeSqlScript(
+                        tenantConn,
+                        new ClassPathResource("db/tenant_template.sql")
+                );
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace(); // IMPORTANT
+            throw new RuntimeException(
+                    "Failed to initialize tenant database schema", e
+            );
+        }
+    }
+
     private String generateSuperAdminUrl(String email) {
-
-        // take part before @
-        String localPart = email.split("@")[0];
-
-        // keep ONLY characters (remove numbers + special chars)
-        localPart = localPart
+        String localPart = email.split("@")[0]
                 .toLowerCase()
                 .replaceAll("[^a-z]", "");
 
@@ -176,24 +224,19 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         return localPart + ".yourdomain.com";
     }
-    
-    @Override
-    public void createAdmin(
-            AdminRequest adminRequest,
-            HttpServletRequest httpRequest
-    ) {
 
-        // 1️⃣ Email uniqueness check
+    // ================= CREATE ADMIN =================
+    @Override
+    @Transactional
+    public void createAdmin(AdminRequest adminRequest, HttpServletRequest httpRequest) {
+
         if (userRepository.existsByEmail(adminRequest.getEmail())) {
             throw new RuntimeException("User already exists with this email");
         }
 
-        // 2️⃣ Create ADMIN user
         User admin = new User();
         admin.setEmail(adminRequest.getEmail());
-        admin.setPassword(
-                passwordEncoder.encode(adminRequest.getPassword())
-        );
+        admin.setPassword(passwordEncoder.encode(adminRequest.getPassword()));
         admin.setFirstName(adminRequest.getFirstName());
         admin.setLastName(adminRequest.getLastName());
         admin.setPhone(adminRequest.getPhone());
@@ -202,33 +245,23 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         admin = userRepository.save(admin);
 
-        // 3️⃣ Create SYSTEM SETTINGS (ALL REQUIRED FIELDS)
         SystemSettings settings = new SystemSettings();
         settings.setUserId(admin.getUserId());
-
         settings.setMaxLoginAttempts(5L);
         settings.setAccLockDuration(30L);
         settings.setPassExpiryDays(60L);
         settings.setPassLength(10L);
-
         settings.setJwtExpiryMins(60L);
         settings.setSessionTimeout(60L);
-
         settings.setMultiSession(false);
-        settings.setEnableLoginAudit(null);
-        settings.setEnableAuditLog(null);
-
         settings.setPasswordLastUpdatedAt(LocalDateTime.now());
         settings.setUpdatedTime(LocalDateTime.now());
 
         systemSettingsRepository.save(settings);
 
-        // 4️⃣ Send credentials mail
         emailService.sendAdminCredentialsMail(
                 admin.getEmail(),
                 adminRequest.getPassword()
         );
     }
-
- 
 }
