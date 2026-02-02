@@ -76,6 +76,17 @@ public class JwtFilter extends OncePerRequestFilter {
                 return;
             }
 
+            // 🔑 STEP 1: Extract tenant FIRST (NO DB CALLS YET)
+            String tenantDb = jwtUtil.extractTenantDb(token);
+            if (tenantDb == null) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                return;
+            }
+
+            // 🔑 STEP 2: Set tenant BEFORE using repositories
+            TenantContext.setTenant(tenantDb);
+
+            // 🔑 STEP 3: Now it is SAFE to touch tenant DB
             String email = jwtUtil.extractEmail(token);
 
             User user = userRepository.findByEmail(email).orElse(null);
@@ -92,15 +103,6 @@ public class JwtFilter extends OncePerRequestFilter {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
-
-            // 🔑 TENANT EXTRACTION
-            String tenantDb = jwtUtil.extractTenantDb(token);
-            if (tenantDb == null) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                return;
-            }
-
-            TenantContext.setTenant(jwtUtil.extractTenantDb(token));
 
             // ---------- SESSION TIMEOUT ----------
             SystemSettings settings = systemSettingsRepository
@@ -163,7 +165,7 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } finally {
-            // 🔥 CRITICAL: prevent tenant leakage across requests
+            // 🔥 ALWAYS clear tenant after request
             TenantContext.clear();
         }
     }

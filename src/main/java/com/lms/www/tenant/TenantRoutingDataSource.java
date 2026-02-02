@@ -1,29 +1,24 @@
 package com.lms.www.tenant;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
 
-import com.zaxxer.hikari.HikariDataSource;
-
+@Primary
 public class TenantRoutingDataSource extends AbstractRoutingDataSource {
 
-    private final Map<Object, Object> dataSources = new ConcurrentHashMap<>();
-
-    public void addTenant(String tenantDb) {
-        HikariDataSource ds = new HikariDataSource();
-        ds.setJdbcUrl("jdbc:mysql://localhost:3306/" + tenantDb);
-        ds.setUsername("root");
-        ds.setPassword("password");
-
-        dataSources.put(tenantDb, ds);
-        setTargetDataSources(dataSources);
-        afterPropertiesSet();
-    }
+    private static final Logger log =
+            LoggerFactory.getLogger(TenantRoutingDataSource.class);
 
     @Override
     protected Object determineCurrentLookupKey() {
-        return TenantContext.getTenant();
+        String tenant = TenantContext.getTenant();
+
+        if (tenant == null) {
+            return "MASTER";
+        }
+        return tenant;
     }
+
 }

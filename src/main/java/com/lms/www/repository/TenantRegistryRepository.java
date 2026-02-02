@@ -9,5 +9,5 @@ import com.lms.www.model.TenantRegistry;
 public interface TenantRegistryRepository
 extends JpaRepository<TenantRegistry, Long> {
 
-Optional<TenantRegistry> findBySuperAdminUserId(Long userId);
+	Optional<TenantRegistry> findBySuperAdminEmail(String email);
 }

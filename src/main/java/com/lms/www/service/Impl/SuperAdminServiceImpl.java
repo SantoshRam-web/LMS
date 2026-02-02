@@ -14,19 +14,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.controller.AdminRequest;
 import com.lms.www.model.OtpVerification;
-import com.lms.www.model.SuperAdmin;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.repository.OtpVerificationRepository;
-import com.lms.www.repository.SuperAdminRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.service.EmailService;
 import com.lms.www.service.SuperAdminService;
 import com.lms.www.service.TenantUserCreationService;
+import com.lms.www.tenant.TenantContext;
 
 import jakarta.servlet.http.HttpServletRequest;
-
 
 @Service
 public class SuperAdminServiceImpl implements SuperAdminService {
@@ -37,9 +35,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
     private final JdbcTemplate jdbcTemplate;
-    private final SuperAdminRepository superAdminRepository;
     private final TenantUserCreationService tenantUserCreationService;
-    
+
     @Value("${spring.datasource.username}")
     private String dbUser;
 
@@ -53,7 +50,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             PasswordEncoder passwordEncoder,
             EmailService emailService,
             JdbcTemplate jdbcTemplate,
-            SuperAdminRepository superAdminRepository,
             TenantUserCreationService tenantUserCreationService
     ) {
         this.otpRepo = otpRepo;
@@ -62,7 +58,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
         this.jdbcTemplate = jdbcTemplate;
-        this.superAdminRepository = superAdminRepository;
         this.tenantUserCreationService = tenantUserCreationService;
     }
 
@@ -70,14 +65,6 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     @Override
     @Transactional
     public void requestOtp(String email, String phone) {
-
-        if (superAdminRepository.existsByEmail(email)) {
-            throw new RuntimeException("Super admin already exists");
-        }
-
-        if (superAdminRepository.existsByPhone(phone)) {
-            throw new RuntimeException("Phone number already in use");
-        }
 
         String otp = String.valueOf(100000 + new java.util.Random().nextInt(900000));
 
@@ -140,50 +127,49 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             throw new RuntimeException("OTP not verified");
         }
 
-        otpRepo.delete(otp);
+        otpRepo.delete(otp); // master DB – OK
 
         String tenantDb = "lms_tenant_" + System.currentTimeMillis();
 
-        // ✅ CREATE TENANT DB FROM TEMPLATE
+        // 1️⃣ CREATE TENANT DB
         createTenantDatabaseFromTemplate(tenantDb);
 
-        // ✅ REGISTER TENANT (MASTER DB)
+        // 2️⃣ REGISTER TENANT (MASTER DB ONLY)
         jdbcTemplate.update(
-                "INSERT INTO tenant_registry (super_admin_email, tenant_db_name) VALUES (?, ?)",
-                email, tenantDb
+            "INSERT INTO tenant_registry (super_admin_email, tenant_db_name) VALUES (?, ?)",
+            email, tenantDb
         );
 
-        // ✅ SAVE SUPER ADMIN (MASTER DB)
-        SuperAdmin sa = new SuperAdmin();
-        sa.setEmail(email);
-        sa.setPhone(phone);
-        sa.setPassword(passwordEncoder.encode(password));
-        sa.setEnabled(true);
-        superAdminRepository.save(sa);
+        // ============================
+        // 🔥 SWITCH TO TENANT DB
+        // ============================
+        TenantContext.setTenant(tenantDb);
+        try {
+            tenantUserCreationService.createSuperAdminUserTx(
+                    email,
+                    password,
+                    firstName,
+                    lastName,
+                    phone
+            );
+        } finally {
+            TenantContext.clear();
+        }
 
-        // ✅ CREATE SUPER ADMIN USER IN TENANT DB
-        tenantUserCreationService.createSuperAdminUser(
-                tenantDb,
-                email,
-                password,
-                phone
-        );
 
         String url = generateSuperAdminUrl(email);
         emailService.sendSuperAdminCredentialsMail(email, password, url);
     }
-    
-    // ================= TEMPLATE DB CLONE (FINAL, CORRECT) =================
+
+    // ================= TEMPLATE DB CLONE =================
     private void createTenantDatabaseFromTemplate(String tenantDb) {
 
-        // 1️⃣ Create tenant DB using master connection
         jdbcTemplate.execute(
             "CREATE DATABASE " + tenantDb +
             " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
         );
 
         try {
-            // 2️⃣ Build TENANT JDBC URL (THIS IS THE KEY)
             String masterUrl = jdbcTemplate
                     .getDataSource()
                     .getConnection()
@@ -192,13 +178,11 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
             String tenantUrl = masterUrl.replace("/master_db", "/" + tenantDb);
 
-            // 3️⃣ Open DIRECT connection to tenant DB
             try (Connection tenantConn = DriverManager.getConnection(
                     tenantUrl,
                     dbUser,
                     dbPassword
             )) {
-                // 4️⃣ Execute schema INSIDE tenant DB
                 ScriptUtils.executeSqlScript(
                         tenantConn,
                         new ClassPathResource("db/tenant_template.sql")
@@ -206,10 +190,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             }
 
         } catch (Exception e) {
-            e.printStackTrace(); // IMPORTANT
-            throw new RuntimeException(
-                    "Failed to initialize tenant database schema", e
-            );
+            throw new RuntimeException("Failed to initialize tenant database schema", e);
         }
     }
 

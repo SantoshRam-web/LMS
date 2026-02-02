@@ -2,6 +2,7 @@ package com.lms.www.service.Impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -9,12 +10,15 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.config.JwtUtil;
+import com.lms.www.model.SuperAdmin;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.model.UserSession;
 import com.lms.www.repository.LoginHistoryRepository;
 import com.lms.www.repository.RolePermissionRepository;
+import com.lms.www.repository.SuperAdminRepository;
 import com.lms.www.repository.SystemSettingsRepository;
+import com.lms.www.repository.TenantRegistryRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.service.AuthService;
@@ -39,6 +43,8 @@ public class AuthServiceImpl implements AuthService {
     private final LoginHistoryRepository loginHistoryRepository;
     private final EmailService emailService;
     private final TenantResolver tenantResolver;
+    private final SuperAdminRepository superAdminRepository;
+    private final TenantRegistryRepository tenantRegistryRepository;
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -50,7 +56,9 @@ public class AuthServiceImpl implements AuthService {
             JwtUtil jwtUtil,
             LoginHistoryRepository loginHistoryRepository,
             EmailService emailService,
-            TenantResolver tenantResolver
+            TenantResolver tenantResolver,
+            SuperAdminRepository superAdminRepository,
+            TenantRegistryRepository tenantRegistryRepository
     ) {
         this.userRepository = userRepository;
         this.rolePermissionRepository = rolePermissionRepository;
@@ -62,27 +70,43 @@ public class AuthServiceImpl implements AuthService {
         this.loginHistoryRepository = loginHistoryRepository;
         this.emailService = emailService;
         this.tenantResolver = tenantResolver;
+        this.superAdminRepository = superAdminRepository;
+        this.tenantRegistryRepository = tenantRegistryRepository;
     }
 
     @Override
-    public String login(String email, String password, String ipAddress, HttpServletRequest request) {
+    public String login(
+            String email,
+            String password,
+            String ipAddress,
+            HttpServletRequest request
+    ) {
+
+        // ================================
+        // STEP 1: RESOLVE TENANT (MASTER DB)
+        // ================================
+
+        String tenantDb = tenantRegistryRepository
+                .findBySuperAdminEmail(email)
+                .map(tr -> tr.getTenantDbName())
+                .orElseThrow(() -> new RuntimeException("Tenant not found"));
+
+        // ================================
+        // STEP 2: SET TENANT CONTEXT
+        // ================================
+
+        TenantContext.setTenant(tenantDb);
 
         try {
-            
-        	String tenantDb = tenantResolver.resolveTenantDb(email);
-        	TenantContext.setTenant(tenantDb);
+            // ================================
+            // STEP 3: TENANT DB OPERATIONS
+            // ================================
 
-
-            User user = userRepository.findByEmail(email).orElse(null);
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
             String ipAddress1 = request.getRemoteAddr();
             String userAgent = request.getHeader("User-Agent");
-
-            // ❌ USER NOT FOUND
-            if (user == null) {
-                failedLoginAttemptService.recordFailedAttempt(null, ipAddress1);
-                throw new RuntimeException("Invalid credentials");
-            }
 
             // ⛔ DISABLED USER
             if (Boolean.FALSE.equals(user.getEnabled())) {
@@ -93,7 +117,7 @@ public class AuthServiceImpl implements AuthService {
                     .findByUserId(user.getUserId())
                     .orElseThrow(() -> new RuntimeException("System settings missing"));
 
-            // 🔐 PASSWORD EXPIRY CHECK
+            // 🔐 PASSWORD EXPIRY
             if (settings.getPasswordLastUpdatedAt() != null
                     && settings.getPassExpiryDays() != null) {
 
@@ -108,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
                 }
             }
 
-            // 🔒 ACCOUNT LOCK CHECK
+            // 🔒 ACCOUNT LOCK
             long attempts =
                     failedLoginAttemptService.countRecentAttempts(
                             user.getUserId(),
@@ -125,6 +149,7 @@ public class AuthServiceImpl implements AuthService {
 
             // ❌ WRONG PASSWORD
             if (!passwordEncoder.matches(password, user.getPassword())) {
+
                 settings.setEnableLoginAudit(false);
                 systemSettingsRepository.save(settings);
 
@@ -141,7 +166,7 @@ public class AuthServiceImpl implements AuthService {
                 throw new RuntimeException("Invalid credentials");
             }
 
-            // ✅ LOGIN SUCCESS FLOW (unchanged)
+            // ✅ SUCCESS
             failedLoginAttemptService.clearAttempts(user.getUserId());
 
             expireIdleSessions(user, settings);
@@ -150,7 +175,6 @@ public class AuthServiceImpl implements AuthService {
             settings.setEnableLoginAudit(true);
             systemSettingsRepository.save(settings);
 
-            // 🔑 PERMISSIONS
             List<String> permissions =
                     rolePermissionRepository.findByRoleName(user.getRoleName())
                             .stream()
@@ -158,7 +182,6 @@ public class AuthServiceImpl implements AuthService {
                             .distinct()
                             .toList();
 
-            // 🔐 JWT
             String token = jwtUtil.generateToken(
                     user.getUserId(),
                     user.getEmail(),
@@ -167,7 +190,6 @@ public class AuthServiceImpl implements AuthService {
                     tenantDb
             );
 
-            // ✅ SESSION
             UserSession session = new UserSession();
             session.setUser(user);
             session.setToken(token);
@@ -178,10 +200,14 @@ public class AuthServiceImpl implements AuthService {
             return token;
 
         } finally {
-            // 🧹 VERY IMPORTANT
+            // ================================
+            // STEP 4: ALWAYS CLEAR CONTEXT
+            // ================================
             TenantContext.clear();
         }
     }
+
+
 
     /**
      * 🔥 EXPIRE SESSIONS THAT TIMED OUT DUE TO INACTIVITY
