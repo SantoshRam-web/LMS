@@ -48,7 +48,7 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/auth/")
+        return path.startsWith("/auth/login")
             || path.startsWith("/super-admin/signup/");
     }
 
@@ -69,6 +69,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             String token = header.substring(7);
 
+            // 1️⃣ Validate token
             try {
                 jwtUtil.validateToken(token);
             } catch (Exception ex) {
@@ -76,17 +77,17 @@ public class JwtFilter extends OncePerRequestFilter {
                 return;
             }
 
-            // 🔑 STEP 1: Extract tenant FIRST (NO DB CALLS YET)
+            // 2️⃣ Extract tenant FIRST
             String tenantDb = jwtUtil.extractTenantDb(token);
             if (tenantDb == null) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 
-            // 🔑 STEP 2: Set tenant BEFORE using repositories
+            // 🔥 THIS IS THE FIX
             TenantContext.setTenant(tenantDb);
 
-            // 🔑 STEP 3: Now it is SAFE to touch tenant DB
+            // 3️⃣ Now it is SAFE to hit repositories
             String email = jwtUtil.extractEmail(token);
 
             User user = userRepository.findByEmail(email).orElse(null);
@@ -165,8 +166,8 @@ public class JwtFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } finally {
-            // 🔥 ALWAYS clear tenant after request
             TenantContext.clear();
         }
     }
+
 }

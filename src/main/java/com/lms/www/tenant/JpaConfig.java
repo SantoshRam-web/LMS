@@ -15,12 +15,12 @@ public class JpaConfig {
 
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory(
-            TenantRoutingDataSource tenantRoutingDataSource
+            DataSource tenantRoutingDataSource // 🔥 proxy injected
     ) {
         LocalContainerEntityManagerFactoryBean emf =
                 new LocalContainerEntityManagerFactoryBean();
 
-        emf.setDataSource(tenantRoutingDataSource); // 🔥 THIS IS THE FIX
+        emf.setDataSource(tenantRoutingDataSource);
         emf.setPackagesToScan("com.lms.www.model");
         emf.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 

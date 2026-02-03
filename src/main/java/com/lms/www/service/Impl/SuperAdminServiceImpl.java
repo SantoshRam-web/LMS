@@ -4,9 +4,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.time.LocalDateTime;
 
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.jdbc.datasource.init.ScriptUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,6 +27,7 @@ import com.lms.www.service.EmailService;
 import com.lms.www.service.SuperAdminService;
 import com.lms.www.service.TenantUserCreationService;
 import com.lms.www.tenant.TenantContext;
+import com.lms.www.tenant.TenantRoutingDataSource;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -36,6 +41,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final EmailService emailService;
     private final JdbcTemplate jdbcTemplate;
     private final TenantUserCreationService tenantUserCreationService;
+    private final DataSource tenantRoutingDataSource;
 
     @Value("${spring.datasource.username}")
     private String dbUser;
@@ -50,7 +56,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             PasswordEncoder passwordEncoder,
             EmailService emailService,
             JdbcTemplate jdbcTemplate,
-            TenantUserCreationService tenantUserCreationService
+            TenantUserCreationService tenantUserCreationService,
+            @Qualifier("tenantRoutingDataSource") DataSource tenantRoutingDataSource
     ) {
         this.otpRepo = otpRepo;
         this.userRepository = userRepository;
@@ -59,6 +66,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         this.emailService = emailService;
         this.jdbcTemplate = jdbcTemplate;
         this.tenantUserCreationService = tenantUserCreationService;
+        this.tenantRoutingDataSource = tenantRoutingDataSource;
     }
 
     // ================= INIT SIGNUP =================
@@ -133,6 +141,11 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         // 1️⃣ CREATE TENANT DB
         createTenantDatabaseFromTemplate(tenantDb);
+        
+        //  REGISTER TENANT DATASOURCE
+        ((TenantRoutingDataSource)
+        	    ((LazyConnectionDataSourceProxy) tenantRoutingDataSource).getTargetDataSource()
+        	).addTenant(tenantDb);
 
         // 2️⃣ REGISTER TENANT (MASTER DB ONLY)
         jdbcTemplate.update(

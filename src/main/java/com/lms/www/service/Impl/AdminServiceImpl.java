@@ -128,12 +128,6 @@ public class AdminServiceImpl implements AdminService {
         user.setPhone(phone);
         user.setEnabled(true);
         user.setRoleName(roleName);
-        
-        if (admin.getRoleName().equals("SUPER_ADMIN")) {
-            user.setCreatedBySuperAdminId(admin.getUserId());
-        } else {
-            user.setCreatedBySuperAdminId(admin.getCreatedBySuperAdminId());
-        }
 
         
         if (userRepository.existsByPhone(phone)) {

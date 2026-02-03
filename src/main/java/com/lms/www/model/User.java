@@ -46,8 +46,5 @@ public class User {
     @JsonIgnore
     @OneToOne(mappedBy = "user", fetch = FetchType.LAZY)
     private Address address;
-    
-    @Column(name = "created_by_super_admin_id")
-    private Long createdBySuperAdminId;
 
 }

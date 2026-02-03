@@ -1,33 +1,26 @@
 package com.lms.www.tenant;
 
-import java.util.HashMap;
-import java.util.Map;
-
 import javax.sql.DataSource;
 
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 
 @Configuration
 public class TenantDataSourceConfig {
 
     @Bean
-    @Primary
-    public TenantRoutingDataSource tenantRoutingDataSource(
-            @Qualifier("masterDataSource") DataSource masterDataSource
+    public DataSource tenantRoutingDataSource(
+            DataSource masterDataSource,
+            @Value("${spring.datasource.url}") String url,
+            @Value("${spring.datasource.username}") String user,
+            @Value("${spring.datasource.password}") String pass
     ) {
-        TenantRoutingDataSource ds = new TenantRoutingDataSource();
+        TenantRoutingDataSource routing = new TenantRoutingDataSource();
+        routing.init(masterDataSource, url, user, pass);
 
-        Map<Object, Object> map = new HashMap<>();
-        map.put("master", masterDataSource);
-
-        ds.setDefaultTargetDataSource(masterDataSource);
-        ds.setTargetDataSources(map);
-        ds.afterPropertiesSet();
-
-        return ds;
+        // 🔥 REQUIRED
+        return new LazyConnectionDataSourceProxy(routing);
     }
 }
-

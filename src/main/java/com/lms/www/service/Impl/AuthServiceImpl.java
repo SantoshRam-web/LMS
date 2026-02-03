@@ -2,15 +2,14 @@ package com.lms.www.service.Impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.config.JwtUtil;
-import com.lms.www.model.SuperAdmin;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.model.UserSession;
@@ -30,7 +29,6 @@ import com.lms.www.tenant.TenantResolver;
 import jakarta.servlet.http.HttpServletRequest;
 
 @Service
-@Transactional(noRollbackFor = RuntimeException.class)
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -45,6 +43,7 @@ public class AuthServiceImpl implements AuthService {
     private final TenantResolver tenantResolver;
     private final SuperAdminRepository superAdminRepository;
     private final TenantRegistryRepository tenantRegistryRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -58,7 +57,8 @@ public class AuthServiceImpl implements AuthService {
             EmailService emailService,
             TenantResolver tenantResolver,
             SuperAdminRepository superAdminRepository,
-            TenantRegistryRepository tenantRegistryRepository
+            TenantRegistryRepository tenantRegistryRepository,
+            JdbcTemplate jdbcTemplate
     ) {
         this.userRepository = userRepository;
         this.rolePermissionRepository = rolePermissionRepository;
@@ -72,6 +72,7 @@ public class AuthServiceImpl implements AuthService {
         this.tenantResolver = tenantResolver;
         this.superAdminRepository = superAdminRepository;
         this.tenantRegistryRepository = tenantRegistryRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -83,23 +84,37 @@ public class AuthServiceImpl implements AuthService {
     ) {
 
         // ================================
-        // STEP 1: RESOLVE TENANT (MASTER DB)
+        // STEP 1: RESOLVE TENANT (MASTER DB ONLY, NO JPA)
         // ================================
 
-        String tenantDb = tenantRegistryRepository
-                .findBySuperAdminEmail(email)
-                .map(tr -> tr.getTenantDbName())
-                .orElseThrow(() -> new RuntimeException("Tenant not found"));
+        String tenantDb;
+
+        try {
+            // SUPER ADMIN LOGIN (MASTER DB)
+            tenantDb = jdbcTemplate.queryForObject(
+                    "SELECT tenant_db_name FROM tenant_registry WHERE super_admin_email = ?",
+                    String.class,
+                    email
+            );
+        } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
+
+            // NON–SUPER ADMIN LOGIN (ADMIN / INSTRUCTOR / STUDENT)
+        	tenantDb = request.getHeader("X-Tenant-DB");
+        }
+
+        if (tenantDb == null || tenantDb.isBlank()) {
+            throw new RuntimeException("Tenant resolution failed");
+        }
 
         // ================================
-        // STEP 2: SET TENANT CONTEXT
+        // STEP 2: SET TENANT CONTEXT (BEFORE *ANY* JPA CALL)
         // ================================
 
         TenantContext.setTenant(tenantDb);
 
         try {
             // ================================
-            // STEP 3: TENANT DB OPERATIONS
+            // STEP 3: TENANT DB OPERATIONS (JPA SAFE)
             // ================================
 
             User user = userRepository.findByEmail(email)
@@ -117,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
                     .findByUserId(user.getUserId())
                     .orElseThrow(() -> new RuntimeException("System settings missing"));
 
-            // 🔐 PASSWORD EXPIRY
+            // 🔐 PASSWORD EXPIRY CHECK
             if (settings.getPasswordLastUpdatedAt() != null
                     && settings.getPassExpiryDays() != null) {
 
@@ -132,7 +147,7 @@ public class AuthServiceImpl implements AuthService {
                 }
             }
 
-            // 🔒 ACCOUNT LOCK
+            // 🔒 ACCOUNT LOCK CHECK
             long attempts =
                     failedLoginAttemptService.countRecentAttempts(
                             user.getUserId(),
@@ -206,7 +221,6 @@ public class AuthServiceImpl implements AuthService {
             TenantContext.clear();
         }
     }
-
 
 
     /**

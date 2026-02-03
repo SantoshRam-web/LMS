@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.model.SystemSettings;
@@ -28,7 +29,7 @@ public class TenantUserCreationService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createSuperAdminUserTx(
             String email,
             String rawPassword,
@@ -52,6 +53,7 @@ public class TenantUserCreationService {
         settings.setMaxLoginAttempts(5L);
         settings.setAccLockDuration(30L);
         settings.setPassExpiryDays(60L);
+        settings.setPassLength(10L); 
         settings.setJwtExpiryMins(60L);
         settings.setSessionTimeout(60L);
         settings.setPasswordLastUpdatedAt(LocalDateTime.now());
