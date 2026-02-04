@@ -22,7 +22,8 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendAccountCredentialsMail(
             User user,
-            String rawPassword
+            String rawPassword,
+            String loginUrl
     ) {
 
         String subject = "Your LMS Account Has Been Created";
@@ -30,6 +31,7 @@ public class EmailServiceImpl implements EmailService {
         String body =
                 "Hello " + user.getFirstName() + ",\n\n" +
                 "Your LMS account has been successfully created.\n\n" +
+                "You can the application here:"+loginUrl+
                 "Login Details:\n" +
                 "Email: " + user.getEmail() + "\n" +
                 "Password: " + rawPassword + "\n\n" +

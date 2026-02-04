@@ -12,11 +12,12 @@ public class TenantResolver {
         this.jdbcTemplate = jdbcTemplate;
     }
 
-    public String resolveTenantDb(String email) {
+    public String resolveTenantDomain(String tenantDb) {
         return jdbcTemplate.queryForObject(
-            "SELECT tenant_db_name FROM tenant_registry WHERE super_admin_email = ?",
+            "SELECT tenant_domain FROM tenant_registry WHERE tenant_db_name = ?",
             String.class,
-            email
+            tenantDb
         );
     }
+
 }

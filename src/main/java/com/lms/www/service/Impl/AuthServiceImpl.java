@@ -3,6 +3,9 @@ package com.lms.www.service.Impl;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -25,6 +28,7 @@ import com.lms.www.service.EmailService;
 import com.lms.www.service.FailedLoginAttemptService;
 import com.lms.www.tenant.TenantContext;
 import com.lms.www.tenant.TenantResolver;
+import com.lms.www.tenant.TenantRoutingDataSource;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -44,6 +48,10 @@ public class AuthServiceImpl implements AuthService {
     private final SuperAdminRepository superAdminRepository;
     private final TenantRegistryRepository tenantRegistryRepository;
     private final JdbcTemplate jdbcTemplate;
+    @Autowired
+    @org.springframework.beans.factory.annotation.Qualifier("tenantRoutingDataSource")
+    private DataSource dataSource;
+
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -74,6 +82,14 @@ public class AuthServiceImpl implements AuthService {
         this.tenantRegistryRepository = tenantRegistryRepository;
         this.jdbcTemplate = jdbcTemplate;
     }
+    
+    private TenantRoutingDataSource routing() {
+        if (dataSource instanceof org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy proxy) {
+            return (TenantRoutingDataSource) proxy.getTargetDataSource();
+        }
+        throw new IllegalStateException("TenantRoutingDataSource not found");
+    }
+
 
     @Override
     public String login(
@@ -87,25 +103,16 @@ public class AuthServiceImpl implements AuthService {
         // STEP 1: RESOLVE TENANT (MASTER DB ONLY, NO JPA)
         // ================================
 
-        String tenantDb;
+    	String host = request.getServerName(); // santoshchavithini.yourdomain.com
 
-        try {
-            // SUPER ADMIN LOGIN (MASTER DB)
-            tenantDb = jdbcTemplate.queryForObject(
-                    "SELECT tenant_db_name FROM tenant_registry WHERE super_admin_email = ?",
-                    String.class,
-                    email
-            );
-        } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
+    	String tenantDb = jdbcTemplate.queryForObject(
+    	        "SELECT tenant_db_name FROM tenant_registry WHERE tenant_domain = ?",
+    	        String.class,
+    	        host
+    	);
 
-            // NON–SUPER ADMIN LOGIN (ADMIN / INSTRUCTOR / STUDENT)
-        	tenantDb = request.getHeader("X-Tenant-DB");
-        }
-
-        if (tenantDb == null || tenantDb.isBlank()) {
-            throw new RuntimeException("Tenant resolution failed");
-        }
-
+    	routing().addTenant(tenantDb);
+        
         // ================================
         // STEP 2: SET TENANT CONTEXT (BEFORE *ANY* JPA CALL)
         // ================================

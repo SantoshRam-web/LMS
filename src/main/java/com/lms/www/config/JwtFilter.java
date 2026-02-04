@@ -6,6 +6,11 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.sql.DataSource;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -19,6 +24,7 @@ import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.tenant.TenantContext;
+import com.lms.www.tenant.TenantRoutingDataSource;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -32,6 +38,10 @@ public class JwtFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final UserSessionRepository userSessionRepository;
     private final SystemSettingsRepository systemSettingsRepository;
+    @Autowired
+    @Qualifier("tenantRoutingDataSource")
+    private DataSource dataSource;
+
 
     public JwtFilter(
             JwtUtil jwtUtil,
@@ -44,6 +54,14 @@ public class JwtFilter extends OncePerRequestFilter {
         this.userSessionRepository = userSessionRepository;
         this.systemSettingsRepository = systemSettingsRepository;
     }
+    
+    private TenantRoutingDataSource routing() {
+        if (dataSource instanceof LazyConnectionDataSourceProxy proxy) {
+            return (TenantRoutingDataSource) proxy.getTargetDataSource();
+        }
+        throw new IllegalStateException("TenantRoutingDataSource not found");
+    }
+
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -79,12 +97,13 @@ public class JwtFilter extends OncePerRequestFilter {
 
             // 2️⃣ Extract tenant FIRST
             String tenantDb = jwtUtil.extractTenantDb(token);
+
             if (tenantDb == null) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;
             }
 
-            // 🔥 THIS IS THE FIX
+            routing().addTenant(tenantDb);
             TenantContext.setTenant(tenantDb);
 
             // 3️⃣ Now it is SAFE to hit repositories
@@ -160,6 +179,8 @@ public class JwtFilter extends OncePerRequestFilter {
                             null,
                             authorities
                     );
+            
+            authentication.setDetails(user);
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
 

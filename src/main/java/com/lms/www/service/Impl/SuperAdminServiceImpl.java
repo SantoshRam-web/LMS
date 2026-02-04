@@ -147,11 +147,15 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         	    ((LazyConnectionDataSourceProxy) tenantRoutingDataSource).getTargetDataSource()
         	).addTenant(tenantDb);
 
+        String tenantDomain = generateSuperAdminUrl(email); // returns "john"
+
         // 2️⃣ REGISTER TENANT (MASTER DB ONLY)
         jdbcTemplate.update(
-            "INSERT INTO tenant_registry (super_admin_email, tenant_db_name) VALUES (?, ?)",
-            email, tenantDb
-        );
+        		   "INSERT INTO tenant_registry (super_admin_email, tenant_db_name, tenant_domain) VALUES (?,?,?)",
+        		   email,
+        		   tenantDb,
+        		   tenantDomain
+        		);
 
         // ============================
         // 🔥 SWITCH TO TENANT DB

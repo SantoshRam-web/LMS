@@ -1,5 +1,6 @@
 package com.lms.www.service.Impl;
 
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.config.JwtUtil;
 import com.lms.www.config.UserAuthorizationUtil;
 import com.lms.www.controller.request.ConductorRequest;
 import com.lms.www.controller.request.DriverRequest;
@@ -39,6 +41,7 @@ import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.service.AdminService;
 import com.lms.www.service.EmailService;
+import com.lms.www.tenant.TenantResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -62,7 +65,8 @@ public class AdminServiceImpl implements AdminService {
     private final UserSessionRepository userSessionRepository;
     private final DriverRepository driverRepository;
     private final ConductorRepository conductorRepository;
-
+    private final JwtUtil jwtUtil;
+    private final TenantResolver tenantResolver;
 
     public AdminServiceImpl(
             UserRepository userRepository,
@@ -80,7 +84,9 @@ public class AdminServiceImpl implements AdminService {
             AddressRepository addressRepository,
             UserSessionRepository userSessionRepository,
             DriverRepository driverRepository,
-            ConductorRepository conductorRepository
+            ConductorRepository conductorRepository,
+            JwtUtil jwtUtil,
+            TenantResolver tenantResolver
     ) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -98,6 +104,8 @@ public class AdminServiceImpl implements AdminService {
         this.userSessionRepository = userSessionRepository;
         this.driverRepository = driverRepository;
         this.conductorRepository = conductorRepository;
+        this.jwtUtil = jwtUtil;
+        this.tenantResolver = tenantResolver;
     }
 
     // ===================== COMMON =====================
@@ -108,8 +116,18 @@ public class AdminServiceImpl implements AdminService {
             String password,
             String phone,
             String roleName,
-            User admin
+            User admin,
+            HttpServletRequest request
     ) {
+    	
+    	String authHeader = request.getHeader("Authorization");
+
+    	if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+    	    throw new RuntimeException("Missing Authorization header");
+    	}
+
+    	String token = authHeader.substring(7);
+
 
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("User already exists with email: " + email);
@@ -136,7 +154,12 @@ public class AdminServiceImpl implements AdminService {
 
         user = userRepository.save(user);
         
-        emailService.sendAccountCredentialsMail(user, rawPassword);
+        String tenantDb = jwtUtil.extractTenantDb(token);
+        String domain = tenantResolver.resolveTenantDomain(tenantDb);
+
+        String loginUrl = "http://" + domain + ".localhost:9090";
+        
+        emailService.sendAccountCredentialsMail(user, rawPassword,loginUrl);
         emailService.sendRegistrationMail(user, user.getRoleName());
 
 
@@ -186,7 +209,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getPassword(),
                     request.getPhone(),
                     request.getRoleName(),
-                    admin
+                    admin,
+                    httpRequest
             );
 
             Student student = new Student();
@@ -215,7 +239,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getPassword(),
                     request.getPhone(),
                     request.getRoleName(),
-                    admin
+                    admin,
+                    httpRequest
             );
 
             Instructor instructor = new Instructor();
@@ -242,7 +267,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getPassword(),
                     request.getPhone(),
                     request.getRoleName(),
-                    admin
+                    admin,
+                    httpRequest
             );
 
             Parent parent = new Parent();
@@ -269,7 +295,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getPassword(),
                     request.getPhone(),
                     request.getRoleName(),
-                    admin
+                    admin,
+                    httpRequest
             );
 
             Driver driver = new Driver();
@@ -296,7 +323,8 @@ public class AdminServiceImpl implements AdminService {
                     request.getPassword(),
                     request.getPhone(),
                     request.getRoleName(),
-                    admin
+                    admin,
+                    httpRequest
             );
 
             Conductor conductor = new Conductor();

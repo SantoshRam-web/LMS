@@ -7,7 +7,7 @@ import com.lms.www.model.User;
 public interface EmailService {
 
     // ACCOUNT
-    void sendAccountCredentialsMail(User user, String rawPassword);
+    void sendAccountCredentialsMail(User user, String rawPassword, String loginUrl);
 
     void sendRegistrationMail(User user, String role);
 

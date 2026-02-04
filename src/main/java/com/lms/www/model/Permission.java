@@ -17,10 +17,12 @@ public class Permission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "permission_id")
     private Long permissionId;
 
-    @Column(unique = true)
+    @Column(unique = true, name = "permission_name")
     private String permissionName;
-
+    
+    @Column(name = "description")
     private String description;
 }

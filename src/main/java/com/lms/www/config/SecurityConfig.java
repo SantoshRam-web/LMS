@@ -86,6 +86,7 @@ public class SecurityConfig {
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
+        configuration.addExposedHeader("Authorization");
 
         org.springframework.web.cors.UrlBasedCorsConfigurationSource source =
                 new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
