@@ -119,15 +119,14 @@ public class AdminServiceImpl implements AdminService {
             User admin,
             HttpServletRequest request
     ) {
-    	
-    	String authHeader = request.getHeader("Authorization");
 
-    	if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-    	    throw new RuntimeException("Missing Authorization header");
-    	}
+        String authHeader = request.getHeader("Authorization");
 
-    	String token = authHeader.substring(7);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Missing Authorization header");
+        }
 
+        String token = authHeader.substring(7);
 
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("User already exists with email: " + email);
@@ -141,27 +140,26 @@ public class AdminServiceImpl implements AdminService {
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setEmail(email);
-        String rawPassword = password; 
+
+        String rawPassword = password;
         user.setPassword(passwordEncoder.encode(password));
         user.setPhone(phone);
         user.setEnabled(true);
         user.setRoleName(roleName);
 
-        
         if (userRepository.existsByPhone(phone)) {
             throw new RuntimeException("Phone number already in use");
         }
 
         user = userRepository.save(user);
-        
+
+        // 🔥 FIXED PART
         String tenantDb = jwtUtil.extractTenantDb(token);
-        String domain = tenantResolver.resolveTenantDomain(tenantDb);
+        String tenantDomain = tenantResolver.resolveTenantDomain(tenantDb);
+        String loginUrl = tenantResolver.buildTenantLoginUrl(tenantDomain);
 
-        String loginUrl = "http://" + domain + ".localhost:9090";
-        
-        emailService.sendAccountCredentialsMail(user, rawPassword,loginUrl);
+        emailService.sendAccountCredentialsMail(user, rawPassword, loginUrl);
         emailService.sendRegistrationMail(user, user.getRoleName());
-
 
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
@@ -180,6 +178,7 @@ public class AdminServiceImpl implements AdminService {
         systemSettingsRepository.save(settings);
         return user;
     }
+
 
     private void audit(
             String action,

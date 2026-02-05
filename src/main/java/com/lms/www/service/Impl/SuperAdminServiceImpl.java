@@ -27,6 +27,7 @@ import com.lms.www.service.EmailService;
 import com.lms.www.service.SuperAdminService;
 import com.lms.www.service.TenantUserCreationService;
 import com.lms.www.tenant.TenantContext;
+import com.lms.www.tenant.TenantResolver;
 import com.lms.www.tenant.TenantRoutingDataSource;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -42,6 +43,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final JdbcTemplate jdbcTemplate;
     private final TenantUserCreationService tenantUserCreationService;
     private final DataSource tenantRoutingDataSource;
+    private final TenantResolver tenantResolver;
 
     @Value("${spring.datasource.username}")
     private String dbUser;
@@ -57,6 +59,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             EmailService emailService,
             JdbcTemplate jdbcTemplate,
             TenantUserCreationService tenantUserCreationService,
+            TenantResolver tenantResolver,
             @Qualifier("tenantRoutingDataSource") DataSource tenantRoutingDataSource
     ) {
         this.otpRepo = otpRepo;
@@ -67,6 +70,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         this.jdbcTemplate = jdbcTemplate;
         this.tenantUserCreationService = tenantUserCreationService;
         this.tenantRoutingDataSource = tenantRoutingDataSource;
+        this.tenantResolver = tenantResolver;
     }
 
     // ================= INIT SIGNUP =================
@@ -141,25 +145,24 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         // 1️⃣ CREATE TENANT DB
         createTenantDatabaseFromTemplate(tenantDb);
-        
-        //  REGISTER TENANT DATASOURCE
+
+        // 2️⃣ REGISTER TENANT DATASOURCE
         ((TenantRoutingDataSource)
-        	    ((LazyConnectionDataSourceProxy) tenantRoutingDataSource).getTargetDataSource()
-        	).addTenant(tenantDb);
+            ((LazyConnectionDataSourceProxy) tenantRoutingDataSource).getTargetDataSource()
+        ).addTenant(tenantDb);
 
-        String tenantDomain = generateSuperAdminUrl(email); // returns "john"
+        // 🔥 IMPORTANT: ONLY subdomain
+        String tenantDomain = generateSuperAdminUrl(email); // e.g. "santoshchavithini"
 
-        // 2️⃣ REGISTER TENANT (MASTER DB ONLY)
+        // 3️⃣ REGISTER TENANT (MASTER DB ONLY)
         jdbcTemplate.update(
-        		   "INSERT INTO tenant_registry (super_admin_email, tenant_db_name, tenant_domain) VALUES (?,?,?)",
-        		   email,
-        		   tenantDb,
-        		   tenantDomain
-        		);
+            "INSERT INTO tenant_registry (super_admin_email, tenant_db_name, tenant_domain) VALUES (?,?,?)",
+            email,
+            tenantDb,
+            tenantDomain
+        );
 
-        // ============================
-        // 🔥 SWITCH TO TENANT DB
-        // ============================
+        // 4️⃣ SWITCH TO TENANT DB
         TenantContext.setTenant(tenantDb);
         try {
             tenantUserCreationService.createSuperAdminUserTx(
@@ -173,10 +176,11 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             TenantContext.clear();
         }
 
-
-        String url = generateSuperAdminUrl(email);
-        emailService.sendSuperAdminCredentialsMail(email, password, url);
+        // 🔥 Build FULL URL only for email
+        String loginUrl = tenantResolver.buildTenantLoginUrl(tenantDomain);
+        emailService.sendSuperAdminCredentialsMail(email, password, loginUrl);
     }
+
 
     // ================= TEMPLATE DB CLONE =================
     private void createTenantDatabaseFromTemplate(String tenantDb) {
@@ -220,8 +224,10 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             throw new RuntimeException("Invalid email for URL generation");
         }
 
-        return localPart + ".yourdomain.com";
+        // ONLY return the URL (do NOT touch DB here)
+        return localPart;
     }
+
 
     // ================= CREATE ADMIN =================
     @Override

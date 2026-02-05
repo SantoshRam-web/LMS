@@ -19,5 +19,9 @@ public class TenantResolver {
             tenantDb
         );
     }
+    
+    public String buildTenantLoginUrl(String tenantDomain) {
+        return "http://" + tenantDomain + ".yourdomain.com:9090";
+    }
 
 }

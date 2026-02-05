@@ -10,6 +10,7 @@ import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.LazyConnectionDataSourceProxy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -38,6 +39,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private final UserRepository userRepository;
     private final UserSessionRepository userSessionRepository;
     private final SystemSettingsRepository systemSettingsRepository;
+    private JdbcTemplate jdbcTemplate;
     @Autowired
     @Qualifier("tenantRoutingDataSource")
     private DataSource dataSource;
@@ -47,12 +49,14 @@ public class JwtFilter extends OncePerRequestFilter {
             JwtUtil jwtUtil,
             UserRepository userRepository,
             UserSessionRepository userSessionRepository,
-            SystemSettingsRepository systemSettingsRepository
+            SystemSettingsRepository systemSettingsRepository,
+            JdbcTemplate jdbcTemplate
     ) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.userSessionRepository = userSessionRepository;
         this.systemSettingsRepository = systemSettingsRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
     
     private TenantRoutingDataSource routing() {
@@ -68,6 +72,16 @@ public class JwtFilter extends OncePerRequestFilter {
         String path = request.getRequestURI();
         return path.startsWith("/auth/login")
             || path.startsWith("/super-admin/signup/");
+    }
+    
+    private String extractSubdomain(HttpServletRequest request) {
+        String host = request.getServerName(); // santoshchavithini.yourdomain.com
+
+        if (host == null || !host.contains(".")) {
+            return null;
+        }
+
+        return host.split("\\.")[0];
     }
 
     @Override
@@ -97,6 +111,32 @@ public class JwtFilter extends OncePerRequestFilter {
 
             // 2️⃣ Extract tenant FIRST
             String tenantDb = jwtUtil.extractTenantDb(token);
+            
+            String subdomain = extractSubdomain(request);
+
+         // 🔥 enforce domain → tenant binding
+         if (subdomain != null) {
+
+        	 String expectedTenantDb;
+
+        	 try {
+        	     expectedTenantDb = jdbcTemplate.queryForObject(
+        	         "SELECT tenant_db_name FROM tenant_registry WHERE tenant_domain = ?",
+        	         String.class,
+        	         subdomain.toLowerCase()
+        	     );
+        	 } catch (org.springframework.dao.EmptyResultDataAccessException ex) {
+        	     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+        	     return;
+        	 }
+
+
+             if (!tenantDb.equals(expectedTenantDb)) {
+                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                 return;
+             }
+         }
+
 
             if (tenantDb == null) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
@@ -189,6 +229,7 @@ public class JwtFilter extends OncePerRequestFilter {
         } finally {
             TenantContext.clear();
         }
+        
     }
 
 }

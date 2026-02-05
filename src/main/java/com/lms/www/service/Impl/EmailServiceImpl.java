@@ -31,7 +31,7 @@ public class EmailServiceImpl implements EmailService {
         String body =
                 "Hello " + user.getFirstName() + ",\n\n" +
                 "Your LMS account has been successfully created.\n\n" +
-                "You can the application here:"+loginUrl+
+                "You can access the application here:\n"+loginUrl+"\n\n"+
                 "Login Details:\n" +
                 "Email: " + user.getEmail() + "\n" +
                 "Password: " + rawPassword + "\n\n" +

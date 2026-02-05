@@ -104,11 +104,17 @@ public class AuthServiceImpl implements AuthService {
         // ================================
 
     	String host = request.getServerName(); // santoshchavithini.yourdomain.com
+    	
+    	if (host == null || !host.contains(".")) {
+    	    throw new RuntimeException("Invalid tenant domain");
+    	}
 
+    	String subdomain = host.split("\\.")[0];
+    	
     	String tenantDb = jdbcTemplate.queryForObject(
     	        "SELECT tenant_db_name FROM tenant_registry WHERE tenant_domain = ?",
     	        String.class,
-    	        host
+    	        subdomain
     	);
 
     	routing().addTenant(tenantDb);
