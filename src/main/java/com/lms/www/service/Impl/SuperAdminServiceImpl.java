@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.config.JwtUtil;
 import com.lms.www.controller.AdminRequest;
 import com.lms.www.model.OtpVerification;
 import com.lms.www.model.SystemSettings;
@@ -44,6 +45,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final TenantUserCreationService tenantUserCreationService;
     private final DataSource tenantRoutingDataSource;
     private final TenantResolver tenantResolver;
+    private final JwtUtil jwtUtil;
 
     @Value("${spring.datasource.username}")
     private String dbUser;
@@ -60,7 +62,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             JdbcTemplate jdbcTemplate,
             TenantUserCreationService tenantUserCreationService,
             TenantResolver tenantResolver,
-            @Qualifier("tenantRoutingDataSource") DataSource tenantRoutingDataSource
+            @Qualifier("tenantRoutingDataSource") DataSource tenantRoutingDataSource,
+            JwtUtil jwtUtil
     ) {
         this.otpRepo = otpRepo;
         this.userRepository = userRepository;
@@ -71,6 +74,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         this.tenantUserCreationService = tenantUserCreationService;
         this.tenantRoutingDataSource = tenantRoutingDataSource;
         this.tenantResolver = tenantResolver;
+        this.jwtUtil = jwtUtil;
     }
 
     // ================= INIT SIGNUP =================
@@ -233,7 +237,17 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     @Override
     @Transactional
     public void createAdmin(AdminRequest adminRequest, HttpServletRequest httpRequest) {
+    	
+    	String auth = httpRequest.getHeader("Authorization");
+        if (auth == null || !auth.startsWith("Bearer ")) {
+            throw new RuntimeException("Missing token");
+        }
 
+        String token = auth.substring(7);
+        String tenantDb = jwtUtil.extractTenantDb(token);
+
+        TenantContext.setTenant(tenantDb);
+        try {
         if (userRepository.existsByEmail(adminRequest.getEmail())) {
             throw new RuntimeException("User already exists with this email");
         }
@@ -267,5 +281,9 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                 admin.getEmail(),
                 adminRequest.getPassword()
         );
+        }finally {
+            TenantContext.clear();
+        }
     }
+        
 }

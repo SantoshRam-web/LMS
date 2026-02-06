@@ -29,12 +29,13 @@ public class PasswordResetController {
         return ResponseEntity.ok("OTP sent to email");
     }
 
-    // 2️⃣ VERIFY OTP
+ // 2️⃣ VERIFY OTP
     @PostMapping("/verify-otp")
     public ResponseEntity<String> verifyOtp(
-            @RequestBody VerifyOtpRequest request
+            @RequestBody VerifyOtpRequest request,
+            HttpServletRequest httpRequest
     ) {
-        service.verifyPasswordResetOtp(request.getOtp());
+        service.verifyPasswordResetOtp(request.getOtp(), httpRequest);
         return ResponseEntity.ok("OTP verified");
     }
 
@@ -47,7 +48,8 @@ public class PasswordResetController {
         service.confirmPasswordReset(
                 request.getNewPassword(),
                 request.getConfirmPassword(),
-                httpRequest.getRemoteAddr()
+                httpRequest.getRemoteAddr(),
+                httpRequest
         );
         return ResponseEntity.ok("Password reset successful");
     }

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.config.JwtUtil;
+import com.lms.www.model.LoginHistory;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.model.UserSession;
@@ -89,7 +90,35 @@ public class AuthServiceImpl implements AuthService {
         }
         throw new IllegalStateException("TenantRoutingDataSource not found");
     }
+    
+    private String detectDevice(String userAgent) {
+        if (userAgent == null) {
+            return "UNKNOWN";
+        }
 
+        String ua = userAgent.toLowerCase();
+
+        if (ua.contains("android")) {
+            return "ANDROID";
+        }
+        if (ua.contains("iphone") || ua.contains("ios")) {
+            return "IOS";
+        }
+        if (ua.contains("windows")) {
+            return "WINDOWS";
+        }
+        if (ua.contains("mac")) {
+            return "MAC";
+        }
+        if (ua.contains("linux")) {
+            return "LINUX";
+        }
+        if (ua.contains("postman")) {
+            return "POSTMAN";
+        }
+
+        return "UNKNOWN";
+    }
 
     @Override
     public String login(
@@ -103,7 +132,7 @@ public class AuthServiceImpl implements AuthService {
         // STEP 1: RESOLVE TENANT (MASTER DB ONLY, NO JPA)
         // ================================
 
-    	String host = request.getServerName(); // santoshchavithini.yourdomain.com
+    	String host = request.getServerName(); 
     	
     	if (host == null || !host.contains(".")) {
     	    throw new RuntimeException("Invalid tenant domain");
@@ -202,6 +231,15 @@ public class AuthServiceImpl implements AuthService {
 
             settings.setEnableLoginAudit(true);
             systemSettingsRepository.save(settings);
+            
+         // ---------- LOGIN HISTORY ----------
+            LoginHistory history = new LoginHistory();
+            history.setUser(user);
+            history.setIpAddress(ipAddress1);
+            history.setUserAgent(userAgent);
+            history.setDevice(detectDevice(userAgent));
+            history.setLoginTime(LocalDateTime.now());
+            loginHistoryRepository.save(history);
 
             List<String> permissions =
                     rolePermissionRepository.findByRoleName(user.getRoleName())

@@ -1,7 +1,6 @@
 package com.lms.www.service;
 
 import com.lms.www.controller.PasswordResetController;
-
 import jakarta.servlet.http.HttpServletRequest;
 
 public interface PasswordResetService {
@@ -11,12 +10,15 @@ public interface PasswordResetService {
             HttpServletRequest httpRequest
     );
 
-    void verifyPasswordResetOtp(String otp);
+    void verifyPasswordResetOtp(
+            String otp,
+            HttpServletRequest httpRequest
+    );
 
     void confirmPasswordReset(
             String newPassword,
             String confirmPassword,
-            String ipAddress
+            String ipAddress,
+            HttpServletRequest httpRequest
     );
 }
-

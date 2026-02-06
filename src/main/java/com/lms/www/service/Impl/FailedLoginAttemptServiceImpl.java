@@ -39,6 +39,7 @@ public class FailedLoginAttemptServiceImpl implements FailedLoginAttemptService 
     }
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void clearAttempts(Long userId) {
         repository.deleteByUserId(userId);
     }

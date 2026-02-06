@@ -37,6 +37,8 @@ public class LoginHistory {
 
     @Column(name = "ip_address")
     private String ipAddress;
+    
+    @Column(name = "user_agent")
     private String userAgent;
     private String device;
 
