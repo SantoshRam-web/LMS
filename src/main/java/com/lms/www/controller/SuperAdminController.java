@@ -85,6 +85,22 @@ public class SuperAdminController {
         service.createAdmin(request, httpRequest);
         return ResponseEntity.ok("Admin created successfully");
     }
+    
+    @PostMapping("/request-disable")
+    public ResponseEntity<String> requestDisable(HttpServletRequest request) {
+
+        // At this point:
+        // - JwtFilter has authenticated SUPER_ADMIN
+        // - TenantContext is already set
+        // - SecurityConfig enforces ROLE_SUPER_ADMIN
+
+        // 🔔 For now: just notify platform (email / log)
+        // NO DB CHANGE HERE
+
+        return ResponseEntity.ok(
+            "Disable request submitted. Platform will review and process it."
+        );
+    }
 
 
 }

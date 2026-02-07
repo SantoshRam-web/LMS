@@ -163,12 +163,12 @@ public class AdminServiceImpl implements AdminService {
 
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
-        settings.setMaxLoginAttempts(5L);
+        settings.setMaxLoginAttempts(3L);
         settings.setAccLockDuration(30L);
         settings.setPassExpiryDays(60L);
         settings.setPassLength(10L);
         settings.setJwtExpiryMins(60L);
-        settings.setSessionTimeout(60L);
+        settings.setSessionTimeout(360L);
         settings.setMultiSession(false);
         settings.setEnableLoginAudit(null);
         settings.setEnableAuditLog(null);
@@ -398,11 +398,14 @@ public class AdminServiceImpl implements AdminService {
         try {
             User existing = getUserByUserId(userId);
             
-         // 🔒 BLOCK ADMIN → SUPER ADMIN
+            // 🔒 BLOCK ADMIN → SUPER ADMIN
             UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(
                     admin,
                     existing
             );
+            
+            UserAuthorizationUtil.assertAdminCannotTouchAdmin(admin, existing);
+
             
             if (updatedUser.getFirstName() != null) existing.setFirstName(updatedUser.getFirstName());
             if (updatedUser.getLastName() != null) existing.setLastName(updatedUser.getLastName());
@@ -493,6 +496,8 @@ public class AdminServiceImpl implements AdminService {
             if (!enabled && "ROLE_SUPER_ADMIN".equals(targetUser.getRoleName())) {
                 throw new RuntimeException("Super Admin cannot be disabled");
             }
+            
+            UserAuthorizationUtil.assertAdminCannotTouchAdmin(requester, targetUser);
 
             // ✅ UPDATE STATUS
             targetUser.setEnabled(enabled);
@@ -519,7 +524,55 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
+    
+    @Override
+    @Transactional
+    public void updateMultiSessionAccessByRole(
+            String roleName,
+            boolean allowMultiSession,
+            User admin,
+            HttpServletRequest request
+    ) {
 
+        // 🔒 Only SUPER_ADMIN can change ADMIN role
+        if ("ROLE_ADMIN".equals(roleName)
+                && !"ROLE_SUPER_ADMIN".equals(admin.getRoleName())) {
+            throw new RuntimeException("Only Super Admin can update Admin role");
+        }
+
+        List<User> users = userRepository.findByRoleName(roleName);
+
+        for (User user : users) {
+
+            // 🔒 Admin cannot touch Super Admin
+            UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(admin, user);
+
+            // 🔒 Admin cannot touch Admin
+            UserAuthorizationUtil.assertAdminCannotTouchAdmin(admin, user);
+
+            systemSettingsRepository.findByUserId(user.getUserId())
+                    .ifPresent(settings -> {
+                        settings.setMultiSession(allowMultiSession);
+                        settings.setUpdatedTime(LocalDateTime.now());
+                        systemSettingsRepository.save(settings);
+                    });
+
+            // 📧 EMAIL (reuse existing mail)
+            emailService.sendMultiSessionStatusMail(user, allowMultiSession);
+
+            // 📝 AUDIT
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit(
+                    allowMultiSession
+                            ? "MULTI_SESSION_ENABLE_ROLE"
+                            : "MULTI_SESSION_DISABLE_ROLE",
+                    "SYSTEM_SETTINGS",
+                    user.getUserId(),
+                    admin,
+                    request
+            );
+        }
+    }
     
     @Override
     public void updateMultiSessionAccess(
@@ -537,6 +590,8 @@ public class AdminServiceImpl implements AdminService {
                     admin,
                     user
             );
+            
+            UserAuthorizationUtil.assertAdminCannotTouchAdmin(admin, user);
 
             SystemSettings settings = systemSettingsRepository
                     .findByUserId(userId)

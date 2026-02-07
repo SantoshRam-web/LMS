@@ -153,6 +153,19 @@ public class AuthServiceImpl implements AuthService {
         // ================================
 
         TenantContext.setTenant(tenantDb);
+        
+        // 🔒 BLOCK TENANT IF SUPER ADMIN IS DISABLED
+        User superAdmin = userRepository
+                .findByRoleName("ROLE_SUPER_ADMIN")
+                .stream()
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Super Admin not found"));
+
+        if (Boolean.FALSE.equals(superAdmin.getEnabled())) {
+            throw new RuntimeException(
+                "Tenant account is disabled. Contact platform support."
+            );
+        }
 
         try {
             // ================================

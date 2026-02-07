@@ -53,6 +53,8 @@ public class AddressServiceImpl implements AddressService {
                 admin,
                 user
         );
+        
+        UserAuthorizationUtil.assertAdminCannotTouchAdmin(admin, user);
 
         address.setUser(user);
         Address saved = addressRepository.save(address);
@@ -87,6 +89,8 @@ public class AddressServiceImpl implements AddressService {
                 admin,
                 targetUser
         );
+        
+        UserAuthorizationUtil.assertAdminCannotTouchAdmin(admin, targetUser);
 
         if (newAddress.getPinCode() != null)
             existing.setPinCode(newAddress.getPinCode());
@@ -124,7 +128,8 @@ public class AddressServiceImpl implements AddressService {
                 admin,
                 targetUser
         );
-
+        
+        UserAuthorizationUtil.assertAdminCannotTouchAdmin(admin, targetUser);
 
         addressRepository.delete(address); // 🔴 REAL DELETE
 

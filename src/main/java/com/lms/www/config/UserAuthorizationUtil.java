@@ -17,4 +17,17 @@ public final class UserAuthorizationUtil {
             );
         }
     }
+    public static void assertAdminCannotTouchAdmin(
+            User requester,
+            User targetUser
+    ) {
+    	if ("ROLE_ADMIN".equals(requester.getRoleName())
+                && "ROLE_ADMIN".equals(targetUser.getRoleName())) {
+            throw new RuntimeException(
+                    "Admin cannot perform operations on Admin"
+            );
+        }
+    	
+    }
+    
 }

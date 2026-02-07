@@ -50,12 +50,12 @@ public class TenantUserCreationService {
 
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
-        settings.setMaxLoginAttempts(5L);
+        settings.setMaxLoginAttempts(3L);
         settings.setAccLockDuration(30L);
         settings.setPassExpiryDays(60L);
         settings.setPassLength(10L); 
         settings.setJwtExpiryMins(60L);
-        settings.setSessionTimeout(60L);
+        settings.setSessionTimeout(360L);
         settings.setPasswordLastUpdatedAt(LocalDateTime.now());
         settings.setUpdatedTime(LocalDateTime.now());
 

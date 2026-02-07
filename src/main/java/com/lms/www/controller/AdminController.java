@@ -269,6 +269,21 @@ public class AdminController {
         }
     }
     
+    @PutMapping("/roles/{roleName}/multi-session")
+    public ResponseEntity<String> updateMultiSessionByRole(
+            @PathVariable String roleName,
+            @RequestBody MultiSessionRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.updateMultiSessionAccessByRole(
+                roleName,
+                request.isMultiSession(),
+                getLoggedInUser(),
+                httpRequest
+        );
+        return ResponseEntity.ok("Multi-session access updated for role " + roleName);
+    }
+    
     @DeleteMapping("/users/{userId}")
     public ResponseEntity<String> deleteUserBlocked() {
         throw new RuntimeException(

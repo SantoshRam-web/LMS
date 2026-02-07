@@ -63,5 +63,13 @@ public interface AdminService {
             User admin,
             HttpServletRequest request
     );
+    
+    void updateMultiSessionAccessByRole(
+            String roleName,
+            boolean allowMultiSession,
+            User admin,
+            HttpServletRequest request
+    );
+
 
 }

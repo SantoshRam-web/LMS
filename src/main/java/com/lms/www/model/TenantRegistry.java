@@ -22,6 +22,12 @@ public class TenantRegistry {
     @Column(name = "tenant_db_name")
     private String tenantDbName;
     
+    @Column(name = "tenant_domain", nullable = false, unique = true)
+    private String tenantDomain;
+    
      @Column(name = "super_admin_email", nullable = false, unique = true)
     private String superAdminEmail;
+     
+     @Column(name = "enabled", nullable = false)
+     private Boolean enabled = true;
 }

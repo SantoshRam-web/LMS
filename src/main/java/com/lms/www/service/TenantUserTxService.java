@@ -51,7 +51,7 @@ public class TenantUserTxService {
         settings.setPassExpiryDays(60L);
         settings.setPassLength(10L);
         settings.setJwtExpiryMins(60L);
-        settings.setSessionTimeout(60L);
+        settings.setSessionTimeout(360L);
         settings.setMultiSession(true);
         settings.setPasswordLastUpdatedAt(LocalDateTime.now());
         settings.setUpdatedTime(LocalDateTime.now());

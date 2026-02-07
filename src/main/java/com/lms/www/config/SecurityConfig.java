@@ -28,11 +28,19 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
 
             	    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-
+            	    
+            	    // 🔓 SUPER ADMIN REQUEST DISABLE (EXPLICIT METHOD)
+            	    .requestMatchers(
+            	        org.springframework.http.HttpMethod.POST,
+            	        "/super-admin/request-disable"
+            	    ).permitAll()
+            	    
             	    // 🔓 PUBLIC
             	    .requestMatchers("/auth/login").permitAll()
             	    .requestMatchers("/auth/logout").permitAll()
             	    .requestMatchers("/auth/password-reset/**").permitAll()
+            	    
+            	    .requestMatchers("/platform/**").permitAll()
 
             	    // 🔓 SUPER ADMIN SIGNUP (ONLY OTP FLOW)
             	    .requestMatchers("/super-admin/signup/**").permitAll()
@@ -71,7 +79,6 @@ public class SecurityConfig {
             )
             
             
-            .addFilterBefore(jwtFilter, LogoutFilter.class)
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
