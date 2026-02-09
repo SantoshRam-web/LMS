@@ -19,8 +19,10 @@ import com.lms.www.controller.request.DriverRequest;
 import com.lms.www.controller.request.InstructorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
+import com.lms.www.controller.request.UserPermissionRequest;
 import com.lms.www.model.Address;
 import com.lms.www.model.User;
+import com.lms.www.service.AccountUnlockService;
 import com.lms.www.service.AddressService;
 import com.lms.www.service.AdminService;
 
@@ -32,10 +34,13 @@ public class AdminController {
 
     private final AdminService adminService;
     private final AddressService addressService;
+    private final AccountUnlockService accountUnlockService;
 
-    public AdminController(AdminService adminService, AddressService addressService) {
+    public AdminController(AdminService adminService, AddressService addressService,
+    		AccountUnlockService accountUnlockService) {
         this.adminService = adminService;
         this.addressService = addressService;
+        this.accountUnlockService = accountUnlockService; 
     }
 
 
@@ -291,6 +296,31 @@ public class AdminController {
         );
     }
 
-
+    @PatchMapping("/users/{userId}/unlock")
+    public ResponseEntity<String> unlockUser(
+            @PathVariable Long userId,
+            HttpServletRequest request
+    ) {
+        adminService.unlockUser(
+                userId,
+                getLoggedInUser(),
+                request
+        );
+        return ResponseEntity.ok("User account unlocked");
+    }
+    
+    @PostMapping("/users/{userId}/permissions")
+    public ResponseEntity<String> addPermissions(
+            @PathVariable Long userId,
+            @RequestBody UserPermissionRequest requestBody,
+            HttpServletRequest request
+    ) {
+        adminService.addPermissionsToUser(
+                userId,
+                requestBody.getPermissions(),
+                getLoggedInUser(),
+                request
+        );
+        return ResponseEntity.ok("Permissions added successfully");
+    }
 }
-

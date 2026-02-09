@@ -26,6 +26,7 @@ import com.lms.www.model.ParentStudentRelation;
 import com.lms.www.model.Student;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
+import com.lms.www.model.UserPermission;
 import com.lms.www.repository.AddressRepository;
 import com.lms.www.repository.AuditLogRepository;
 import com.lms.www.repository.ConductorRepository;
@@ -37,10 +38,12 @@ import com.lms.www.repository.ParentStudentRelationRepository;
 import com.lms.www.repository.PasswordResetTokenRepository;
 import com.lms.www.repository.StudentRepository;
 import com.lms.www.repository.SystemSettingsRepository;
+import com.lms.www.repository.UserPermissionRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.service.AdminService;
 import com.lms.www.service.EmailService;
+import com.lms.www.service.FailedLoginAttemptService;
 import com.lms.www.tenant.TenantResolver;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -67,6 +70,8 @@ public class AdminServiceImpl implements AdminService {
     private final ConductorRepository conductorRepository;
     private final JwtUtil jwtUtil;
     private final TenantResolver tenantResolver;
+    private final FailedLoginAttemptService failedLoginAttemptService;
+    private final UserPermissionRepository userPermissionRepository; 
 
     public AdminServiceImpl(
             UserRepository userRepository,
@@ -86,7 +91,9 @@ public class AdminServiceImpl implements AdminService {
             DriverRepository driverRepository,
             ConductorRepository conductorRepository,
             JwtUtil jwtUtil,
-            TenantResolver tenantResolver
+            TenantResolver tenantResolver,
+            FailedLoginAttemptService failedLoginAttemptService,
+            UserPermissionRepository userPermissionRepository
     ) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -106,6 +113,8 @@ public class AdminServiceImpl implements AdminService {
         this.conductorRepository = conductorRepository;
         this.jwtUtil = jwtUtil;
         this.tenantResolver = tenantResolver;
+        this.failedLoginAttemptService = failedLoginAttemptService;
+        this.userPermissionRepository = userPermissionRepository;
     }
 
     // ===================== COMMON =====================
@@ -217,7 +226,9 @@ public class AdminServiceImpl implements AdminService {
             student.setDob(request.getDob());
             student.setGender(request.getGender());
             studentRepository.save(student);
-
+            
+            saveUserPermissions(user, request.getPermissions());
+            
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "STUDENT", user.getUserId(), admin, httpRequest);
             emailService.sendRegistrationMail(user, user.getRoleName());
@@ -245,6 +256,8 @@ public class AdminServiceImpl implements AdminService {
             Instructor instructor = new Instructor();
             instructor.setUser(user);
             instructorRepository.save(instructor);
+            
+            saveUserPermissions(user, request.getPermissions());
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "INSTRUCTOR", user.getUserId(), admin, httpRequest);
@@ -273,6 +286,8 @@ public class AdminServiceImpl implements AdminService {
             Parent parent = new Parent();
             parent.setUser(user);
             parentRepository.save(parent);
+            
+            saveUserPermissions(user, request.getPermissions());
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "PARENT", user.getUserId(), admin, httpRequest);
@@ -301,6 +316,8 @@ public class AdminServiceImpl implements AdminService {
             Driver driver = new Driver();
             driver.setUser(user);
             driverRepository.save(driver);
+            
+            saveUserPermissions(user, request.getPermissions());
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "DRIVER", user.getUserId(), admin, httpRequest);
@@ -329,6 +346,8 @@ public class AdminServiceImpl implements AdminService {
             Conductor conductor = new Conductor();
             conductor.setUser(user);
             conductorRepository.save(conductor);
+            
+            saveUserPermissions(user, request.getPermissions());
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "CONDUCTOR", user.getUserId(), admin, httpRequest);
@@ -618,5 +637,84 @@ public class AdminServiceImpl implements AdminService {
         }
     }
 
+    @Override
+    @Transactional
+    public void unlockUser(Long userId, User requester, HttpServletRequest request) {
+
+        User targetUser = getUserByUserId(userId);
+
+        // 🔒 ONLY SUPER ADMIN
+        if (!"ROLE_SUPER_ADMIN".equals(requester.getRoleName())) {
+            throw new RuntimeException("Only Super Admin can unlock accounts");
+        }
+
+        // 🔥 CORE UNLOCK LOGIC
+        failedLoginAttemptService.clearAttempts(userId);
+
+        // 📧 Notify user
+        emailService.sendAccountUnlockedMail(
+                targetUser.getEmail(),
+                LocalDateTime.now()
+        );
+
+        // ✅ AUDIT
+        audit(
+                "ACCOUNT_UNLOCK",
+                "USER",
+                userId,
+                requester,
+                request
+        );
+    }
+    
+    private void saveUserPermissions(
+            User user,
+            List<String> permissions
+    ) {
+        if (permissions == null || permissions.isEmpty()) {
+            return;
+        }
+
+        // 🔒 Super Admin has implicit permissions
+        if ("ROLE_SUPER_ADMIN".equals(user.getRoleName())) {
+            return;
+        }
+
+        for (String permission : permissions) {
+            if (permission == null || permission.isBlank()) {
+                continue;
+            }
+
+            boolean exists = userPermissionRepository
+                    .existsByUser_UserIdAndPermissionName(
+                            user.getUserId(),
+                            permission
+                    );
+
+            if (!exists) {
+                UserPermission up = new UserPermission();
+                up.setUser(user);
+                up.setPermissionName(permission.trim());
+                userPermissionRepository.save(up);
+            }
+        }
+    }
+    
+    @Override
+    public void addPermissionsToUser(
+            Long userId,
+            List<String> permissions,
+            User admin,
+            HttpServletRequest request
+    ) {
+        User user = getUserByUserId(userId);
+
+        UserAuthorizationUtil.assertAdminCannotTouchAdmin(admin, user);
+        UserAuthorizationUtil.assertAdminCannotTouchSuperAdmin(admin, user);
+
+        saveUserPermissions(user, permissions);
+
+        audit("ADD_PERMISSIONS", "USER", userId, admin, request);
+    }
 
 }

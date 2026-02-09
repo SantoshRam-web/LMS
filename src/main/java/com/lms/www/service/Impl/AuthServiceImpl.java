@@ -16,12 +16,14 @@ import com.lms.www.config.JwtUtil;
 import com.lms.www.model.LoginHistory;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
+import com.lms.www.model.UserPermission;
 import com.lms.www.model.UserSession;
 import com.lms.www.repository.LoginHistoryRepository;
 import com.lms.www.repository.RolePermissionRepository;
 import com.lms.www.repository.SuperAdminRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.TenantRegistryRepository;
+import com.lms.www.repository.UserPermissionRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
 import com.lms.www.service.AuthService;
@@ -46,6 +48,7 @@ public class AuthServiceImpl implements AuthService {
     private final LoginHistoryRepository loginHistoryRepository;
     private final EmailService emailService;
     private final TenantResolver tenantResolver;
+    private final UserPermissionRepository userPermissionRepository;
     private final SuperAdminRepository superAdminRepository;
     private final TenantRegistryRepository tenantRegistryRepository;
     private final JdbcTemplate jdbcTemplate;
@@ -67,7 +70,8 @@ public class AuthServiceImpl implements AuthService {
             TenantResolver tenantResolver,
             SuperAdminRepository superAdminRepository,
             TenantRegistryRepository tenantRegistryRepository,
-            JdbcTemplate jdbcTemplate
+            JdbcTemplate jdbcTemplate,
+            UserPermissionRepository userPermissionRepository
     ) {
         this.userRepository = userRepository;
         this.rolePermissionRepository = rolePermissionRepository;
@@ -82,6 +86,7 @@ public class AuthServiceImpl implements AuthService {
         this.superAdminRepository = superAdminRepository;
         this.tenantRegistryRepository = tenantRegistryRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.userPermissionRepository = userPermissionRepository;
     }
     
     private TenantRoutingDataSource routing() {
@@ -253,13 +258,20 @@ public class AuthServiceImpl implements AuthService {
             history.setDevice(detectDevice(userAgent));
             history.setLoginTime(LocalDateTime.now());
             loginHistoryRepository.save(history);
+            
+            List<String> permissions;
 
-            List<String> permissions =
-                    rolePermissionRepository.findByRoleName(user.getRoleName())
-                            .stream()
-                            .map(rp -> rp.getPermission().getPermissionName())
-                            .distinct()
-                            .toList();
+         // 🔒 SUPER ADMIN → FULL ACCESS
+         if ("ROLE_SUPER_ADMIN".equals(user.getRoleName())) {
+             permissions = List.of("*");
+         } else {
+             permissions = userPermissionRepository
+                     .findByUser_UserId(user.getUserId())
+                     .stream()
+                     .map(UserPermission::getPermissionName)
+                     .distinct()
+                     .toList();
+         }
 
             String token = jwtUtil.generateToken(
                     user.getUserId(),

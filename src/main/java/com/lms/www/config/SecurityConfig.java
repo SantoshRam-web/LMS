@@ -39,7 +39,7 @@ public class SecurityConfig {
             	    .requestMatchers("/auth/login").permitAll()
             	    .requestMatchers("/auth/logout").permitAll()
             	    .requestMatchers("/auth/password-reset/**").permitAll()
-            	    
+            	    .requestMatchers("/auth/account-unlock/**").permitAll()
             	    .requestMatchers("/platform/**").permitAll()
 
             	    // 🔓 SUPER ADMIN SIGNUP (ONLY OTP FLOW)

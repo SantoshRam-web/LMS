@@ -1,5 +1,7 @@
 package com.lms.www.controller.request;
 
+import java.util.List;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -15,4 +17,6 @@ public class ParentRequest {
 
     // ✅ REQUIRED
     private String roleName;
+    
+    private List<String> permissions;
 }

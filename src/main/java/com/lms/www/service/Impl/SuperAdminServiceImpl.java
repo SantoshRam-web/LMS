@@ -203,6 +203,9 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
             String tenantUrl = masterUrl.replace("/master_db", "/" + tenantDb);
 
+            System.out.println("MASTER URL  = " + masterUrl);
+            System.out.println("TENANT URL  = " + tenantUrl);
+
             try (Connection tenantConn = DriverManager.getConnection(
                     tenantUrl,
                     dbUser,
@@ -215,9 +218,12 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             }
 
         } catch (Exception e) {
+            // 🔥 THIS IS THE IMPORTANT PART
+            e.printStackTrace();   // <<< ADD THIS LINE
             throw new RuntimeException("Failed to initialize tenant database schema", e);
         }
     }
+
 
     private String generateSuperAdminUrl(String email) {
         String localPart = email.split("@")[0]

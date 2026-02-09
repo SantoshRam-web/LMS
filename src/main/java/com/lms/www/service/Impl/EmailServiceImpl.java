@@ -351,6 +351,35 @@ public class EmailServiceImpl implements EmailService {
     }
     
     @Override
+    public void sendAccountUnlockRequestToSuperAdmin(
+            String superAdminEmail,
+            String lockedUserEmail,
+            String roleName
+    ) {
+        String subject = "Account Unlock Request";
+        String body =
+                "User " + lockedUserEmail +
+                " (" + roleName + ")" +
+                " has requested account unlock.";
+
+        send(superAdminEmail, subject, body);
+    }
+
+    @Override
+    public void sendAccountUnlockedMail(
+            String userEmail,
+            LocalDateTime time
+    ) {
+        String subject = "Account Unlocked";
+        String body =
+                "Your account has been unlocked on " + time +
+                ". You can login now.";
+
+        send(userEmail, subject, body);
+    }
+
+    
+    @Override
     public void sendAccountStatusMail(User user, String status) {
 
         String subject = "LMS Account Status Update";

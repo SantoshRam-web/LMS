@@ -69,9 +69,25 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.startsWith("/auth/password-reset/")
+
+        return
+                // 🔓 Password reset (logged-out flow)
+                path.equals("/auth/password-reset")
+                || path.startsWith("/auth/password-reset/")
+
+                // 🔓 Account unlock (logged-out flow)
+                || path.equals("/auth/account-unlock")
+                || path.startsWith("/auth/account-unlock/")
+
+                // 🔓 Super admin signup (pre-tenant)
+                || path.equals("/super-admin/signup")
                 || path.startsWith("/super-admin/signup/")
-                || path.startsWith("/super-admin/request-disable")
+
+                // 🔓 Super admin disable request
+                || path.equals("/super-admin/request-disable")
+                || path.startsWith("/super-admin/request-disable/")
+
+                // 🔓 Platform-level APIs
                 || path.startsWith("/platform/");
     }
 

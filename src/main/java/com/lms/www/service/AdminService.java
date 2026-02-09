@@ -71,5 +71,13 @@ public interface AdminService {
             HttpServletRequest request
     );
 
+    void unlockUser(Long userId, User requester, HttpServletRequest request);
+    
+    void addPermissionsToUser(
+            Long userId,
+            List<String> permissions,
+            User admin,
+            HttpServletRequest request
+    );
 
 }

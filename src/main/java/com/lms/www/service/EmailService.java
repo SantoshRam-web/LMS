@@ -56,6 +56,15 @@ public interface EmailService {
     void sendParentStudentMappingMailToStudent(User student, User parent);
     
     void sendAccountStatusMail(User user, String status);
+    void sendAccountUnlockRequestToSuperAdmin(
+            String superAdminEmail,
+            String lockedUserEmail,
+            String roleName
+    );
 
+    void sendAccountUnlockedMail(
+            String userEmail,
+            LocalDateTime time
+    );
 
 }

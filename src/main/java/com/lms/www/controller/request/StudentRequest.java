@@ -1,6 +1,7 @@
 package com.lms.www.controller.request;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -20,4 +21,6 @@ public class StudentRequest {
 
     private LocalDate dob;
     private String gender;
+    
+    private List<String> permissions;
 }
