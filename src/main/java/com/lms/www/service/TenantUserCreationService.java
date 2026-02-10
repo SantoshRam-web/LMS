@@ -55,6 +55,9 @@ public class TenantUserCreationService {
         settings.setPassExpiryDays(60L);
         settings.setPassLength(10L); 
         settings.setJwtExpiryMins(60L);
+        settings.setMultiSession(true);
+        settings.setEnableLoginAudit(null);
+        settings.setEnableAuditLog(null);
         settings.setSessionTimeout(360L);
         settings.setPasswordLastUpdatedAt(LocalDateTime.now());
         settings.setUpdatedTime(LocalDateTime.now());

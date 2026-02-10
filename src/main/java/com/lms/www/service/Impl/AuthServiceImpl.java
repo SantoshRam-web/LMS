@@ -19,7 +19,6 @@ import com.lms.www.model.User;
 import com.lms.www.model.UserPermission;
 import com.lms.www.model.UserSession;
 import com.lms.www.repository.LoginHistoryRepository;
-import com.lms.www.repository.RolePermissionRepository;
 import com.lms.www.repository.SuperAdminRepository;
 import com.lms.www.repository.SystemSettingsRepository;
 import com.lms.www.repository.TenantRegistryRepository;
@@ -39,7 +38,6 @@ import jakarta.servlet.http.HttpServletRequest;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final RolePermissionRepository rolePermissionRepository;
     private final UserSessionRepository userSessionRepository;
     private final SystemSettingsRepository systemSettingsRepository;
     private final FailedLoginAttemptService failedLoginAttemptService;
@@ -59,7 +57,6 @@ public class AuthServiceImpl implements AuthService {
 
     public AuthServiceImpl(
             UserRepository userRepository,
-            RolePermissionRepository rolePermissionRepository,
             UserSessionRepository userSessionRepository,
             SystemSettingsRepository systemSettingsRepository,
             FailedLoginAttemptService failedLoginAttemptService,
@@ -74,7 +71,6 @@ public class AuthServiceImpl implements AuthService {
             UserPermissionRepository userPermissionRepository
     ) {
         this.userRepository = userRepository;
-        this.rolePermissionRepository = rolePermissionRepository;
         this.userSessionRepository = userSessionRepository;
         this.systemSettingsRepository = systemSettingsRepository;
         this.failedLoginAttemptService = failedLoginAttemptService;

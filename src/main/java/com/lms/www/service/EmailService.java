@@ -35,8 +35,6 @@ public interface EmailService {
             String superAdminUrl
     );
     
-    void sendAdminCredentialsMail(String email, String password);
-    
     void sendNewDeviceLoginAlert(
             User user,
             String ipAddress,

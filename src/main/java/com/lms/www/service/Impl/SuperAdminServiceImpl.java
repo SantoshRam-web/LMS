@@ -283,10 +283,20 @@ public class SuperAdminServiceImpl implements SuperAdminService {
 
         systemSettingsRepository.save(settings);
 
-        emailService.sendAdminCredentialsMail(
-                admin.getEmail(),
-                adminRequest.getPassword()
+        // 🔥 Build login URL exactly like other users
+        String tenantDomain = tenantResolver.resolveTenantDomain(tenantDb);
+        String loginUrl = tenantResolver.buildTenantLoginUrl(tenantDomain);
+
+        // 🔥 Send same credentials mail format as other users
+        emailService.sendAccountCredentialsMail(
+                admin,
+                adminRequest.getPassword(),
+                loginUrl
         );
+
+        // Optional but consistent
+        emailService.sendRegistrationMail(admin, admin.getRoleName());
+
         }finally {
             TenantContext.clear();
         }
