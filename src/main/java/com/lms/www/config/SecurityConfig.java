@@ -29,12 +29,17 @@ public class SecurityConfig {
 
             	    .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
             	    
-            	    // 🔓 SUPER ADMIN REQUEST DISABLE (EXPLICIT METHOD)
-            	    .requestMatchers(
-            	        org.springframework.http.HttpMethod.POST,
-            	        "/super-admin/request-disable"
-            	    ).permitAll()
+            	    // 2️⃣ PLATFORM IMPORT (EXPLICIT METHOD FIRST)
+                    .requestMatchers(
+                            org.springframework.http.HttpMethod.POST,
+                            "/platform/themes/import"
+                    ).permitAll()
             	    
+            	    // 3️⃣ ALL PLATFORM APIs
+                    .requestMatchers("/platform/**").permitAll()
+                    
+                     // 4️⃣ PUBLIC AUTH APIs
+                    .requestMatchers("/auth/**").permitAll()
             	    // 🔓 PUBLIC
             	    .requestMatchers("/auth/login").permitAll()
             	    .requestMatchers("/auth/logout").permitAll()
@@ -44,6 +49,7 @@ public class SecurityConfig {
 
             	    // 🔓 SUPER ADMIN SIGNUP (ONLY OTP FLOW)
             	    .requestMatchers("/super-admin/signup/**").permitAll()
+            	    .requestMatchers("/super-admin/request-disable").permitAll()
 
             	    // 🔐 SUPER ADMIN (ALL OTHER SUPER ADMIN APIs)
             	    .requestMatchers("/super-admin/**").hasAuthority("ROLE_SUPER_ADMIN")
@@ -72,7 +78,6 @@ public class SecurityConfig {
 
             	    .anyRequest().authenticated()
             	)
-
 
             .sessionManagement(sess ->
                 sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS)

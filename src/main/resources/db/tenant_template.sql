@@ -302,4 +302,37 @@ CREATE TABLE `otp_verification` (
   UNIQUE KEY `uq_active_otp` (`email`, `purpose`, `verified`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS `tenant_themes`;
+CREATE TABLE `tenant_themes` (
+  `tenant_theme_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `theme_template_id` BIGINT NOT NULL,
+  `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT', -- DRAFT / LIVE
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`tenant_theme_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS `tenant_pages`;
+CREATE TABLE tenant_pages (
+    tenant_page_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_theme_id BIGINT NOT NULL,
+    page_key VARCHAR(50) NOT NULL,
+    custom_title VARCHAR(255),
+    is_published BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (tenant_theme_id)
+        REFERENCES tenant_themes(tenant_theme_id)
+        ON DELETE CASCADE
+);
+
+DROP TABLE IF EXISTS `tenant_sections`;
+CREATE TABLE tenant_sections (
+    tenant_section_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_page_id BIGINT NOT NULL,
+    section_type VARCHAR(50) NOT NULL,
+    section_config JSON,
+    display_order INT,
+    FOREIGN KEY (tenant_page_id)
+        REFERENCES tenant_pages(tenant_page_id)
+        ON DELETE CASCADE
+);
+
 SET FOREIGN_KEY_CHECKS = 1;

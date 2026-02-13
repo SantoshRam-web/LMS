@@ -185,7 +185,7 @@ public class JwtFilter extends OncePerRequestFilter {
             // ================================
             // 7️⃣ DOMAIN ↔ TENANT VALIDATION
             // ================================
-            if (subdomain != null) {
+            if (subdomain != null && !path.startsWith("/platform/")) {
                 String expectedTenantDb;
                 try {
                     expectedTenantDb = jdbcTemplate.queryForObject(
@@ -292,6 +292,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
             authentication.setDetails(user);
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            request.setAttribute("authenticatedUser", user);
 
             filterChain.doFilter(request, response);
 
