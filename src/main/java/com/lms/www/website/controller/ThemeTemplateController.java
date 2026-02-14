@@ -1,4 +1,4 @@
-package com.lms.www.controller;
+package com.lms.www.website.controller;
 
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

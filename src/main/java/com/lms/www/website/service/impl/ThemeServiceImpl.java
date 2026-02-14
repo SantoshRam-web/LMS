@@ -1,4 +1,4 @@
-package com.lms.www.service.Impl;
+package com.lms.www.website.service.impl;
 
 import java.util.List;
 import java.util.Map;
@@ -7,13 +7,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.lms.www.model.TenantPage;
-import com.lms.www.model.TenantSection;
-import com.lms.www.model.TenantTheme;
-import com.lms.www.repository.TenantPageRepository;
-import com.lms.www.repository.TenantSectionRepository;
-import com.lms.www.repository.TenantThemeRepository;
-import com.lms.www.service.ThemeService;
+import com.lms.www.website.model.TenantPage;
+import com.lms.www.website.model.TenantSection;
+import com.lms.www.website.model.TenantTheme;
+import com.lms.www.website.repository.TenantPageRepository;
+import com.lms.www.website.repository.TenantSectionRepository;
+import com.lms.www.website.repository.TenantThemeRepository;
+import com.lms.www.website.service.ThemeService;
 
 @Service
 public class ThemeServiceImpl implements ThemeService {

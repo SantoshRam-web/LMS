@@ -1,4 +1,4 @@
-package com.lms.www.controller;
+package com.lms.www.website.controller;
 
 import java.util.List;
 import java.util.Map;
@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.lms.www.model.User;
-import com.lms.www.service.ThemeService;
+import com.lms.www.website.service.ThemeService;
 
 @RestController
 @RequestMapping("/website/themes")

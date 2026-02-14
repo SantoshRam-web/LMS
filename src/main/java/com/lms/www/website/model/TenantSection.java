@@ -1,4 +1,4 @@
-package com.lms.www.model;
+package com.lms.www.website.model;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

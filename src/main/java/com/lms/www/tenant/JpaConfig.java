@@ -21,7 +21,8 @@ public class JpaConfig {
                 new LocalContainerEntityManagerFactoryBean();
 
         emf.setDataSource(tenantRoutingDataSource);
-        emf.setPackagesToScan("com.lms.www.model");
+        emf.setPackagesToScan("com.lms.www.model",
+        		"com.lms.www.website.model");
         emf.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 
         return emf;
