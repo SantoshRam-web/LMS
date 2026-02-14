@@ -118,7 +118,7 @@ public class JwtFilter extends OncePerRequestFilter {
             // ================================
             // 2️⃣ TENANT ENABLE CHECK (MASTER DB)
             // ================================
-            if (subdomain != null) {
+            if (subdomain != null && !subdomain.equals("localhost")) {
                 Boolean tenantEnabled;
                 try {
                     tenantEnabled = jdbcTemplate.queryForObject(
@@ -185,7 +185,7 @@ public class JwtFilter extends OncePerRequestFilter {
             // ================================
             // 7️⃣ DOMAIN ↔ TENANT VALIDATION
             // ================================
-            if (subdomain != null && !path.startsWith("/platform/")) {
+            if (subdomain != null && !path.startsWith("/platform/") && !subdomain.equals("localhost")) {
                 String expectedTenantDb;
                 try {
                     expectedTenantDb = jdbcTemplate.queryForObject(
@@ -197,7 +197,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
-
+                
                 if (!tenantDb.equals(expectedTenantDb)) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     return;
@@ -291,6 +291,7 @@ public class JwtFilter extends OncePerRequestFilter {
                     );
 
             authentication.setDetails(user);
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
             request.setAttribute("authenticatedUser", user);
 

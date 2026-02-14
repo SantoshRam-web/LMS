@@ -327,6 +327,7 @@ DROP TABLE IF EXISTS `tenant_sections`;
 CREATE TABLE tenant_sections (
     tenant_section_id BIGINT AUTO_INCREMENT PRIMARY KEY,
     tenant_page_id BIGINT NOT NULL,
+    template_section_id BIGINT NOT NULL,
     section_type VARCHAR(50) NOT NULL,
     section_config JSON,
     display_order INT,

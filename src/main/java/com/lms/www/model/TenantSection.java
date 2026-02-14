@@ -34,4 +34,7 @@ public class TenantSection {
 
     @Column(name="display_order")
     private Integer displayOrder;
+    
+    @Column(name = "template_section_id")
+    private Long templateSectionId;
 }

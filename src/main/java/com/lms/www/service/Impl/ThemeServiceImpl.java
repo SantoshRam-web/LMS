@@ -80,28 +80,32 @@ public class ThemeServiceImpl implements ThemeService {
             // Fetch sections from MASTER
             List<Map<String, Object>> sections =
                     jdbcTemplate.queryForList(
-                            "SELECT section_type, default_config, display_order " +
-                            "FROM theme_template_sections WHERE template_page_id = ?",
+                            "SELECT template_section_id, section_type, default_config, display_order\r\n"
+                            + "FROM theme_template_sections WHERE template_page_id = ?",
                             templatePageId
                     );
 
             for (Map<String, Object> sectionRow : sections) {
 
-                TenantSection section = new TenantSection();
-                section.setTenantPage(tenantPage);
-                section.setSectionType((String) sectionRow.get("section_type"));
-                section.setSectionConfig(
-                        sectionRow.get("default_config") != null
-                                ? sectionRow.get("default_config").toString()
-                                : "{}"
-                );
-                section.setDisplayOrder(
-                        sectionRow.get("display_order") != null
-                                ? ((Number) sectionRow.get("display_order")).intValue()
-                                : 0
-                );
+            	Long templateSectionId =
+            	        ((Number) sectionRow.get("template_section_id")).longValue();
 
-                tenantSectionRepository.save(section);
+            	TenantSection section = new TenantSection();
+            	section.setTenantPage(tenantPage);
+            	section.setTemplateSectionId(templateSectionId);   // ✅ IMPORTANT
+            	section.setSectionType((String) sectionRow.get("section_type"));
+            	section.setSectionConfig(
+            	        sectionRow.get("default_config") != null
+            	                ? sectionRow.get("default_config").toString()
+            	                : "{}"
+            	);
+            	section.setDisplayOrder(
+            	        sectionRow.get("display_order") != null
+            	                ? ((Number) sectionRow.get("display_order")).intValue()
+            	                : 0
+            	);
+
+            	tenantSectionRepository.save(section);
             }
         }
     }
@@ -220,14 +224,20 @@ public class ThemeServiceImpl implements ThemeService {
                 pageKey
         );
 
-        // Fetch default_config from MASTER
-        String defaultConfig = jdbcTemplate.queryForObject(
+        List<String> configs = jdbcTemplate.query(
                 "SELECT default_config FROM theme_template_sections " +
-                "WHERE template_page_id = ? AND section_type = ?",
-                String.class,
+                "WHERE template_page_id = ? AND section_type = ? " +
+                "ORDER BY template_section_id ASC",
+                (rs, rowNum) -> rs.getString("default_config"),
                 templatePageId,
                 section.getSectionType()
         );
+
+        if (configs.isEmpty()) {
+            throw new RuntimeException("Template section not found");
+        }
+
+        String defaultConfig = configs.get(0);
 
         section.setSectionConfig(defaultConfig != null ? defaultConfig : "{}");
         tenantSectionRepository.save(section);
