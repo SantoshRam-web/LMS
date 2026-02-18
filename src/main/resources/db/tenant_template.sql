@@ -313,14 +313,13 @@ CREATE TABLE `tenant_themes` (
 
 DROP TABLE IF EXISTS `tenant_pages`;
 CREATE TABLE tenant_pages (
-    tenant_page_id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    tenant_theme_id BIGINT NOT NULL,
-    page_key VARCHAR(50) NOT NULL,
-    custom_title VARCHAR(255),
-    is_published BOOLEAN DEFAULT FALSE,
-    FOREIGN KEY (tenant_theme_id)
-        REFERENCES tenant_themes(tenant_theme_id)
-        ON DELETE CASCADE
+  tenant_page_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  tenant_theme_id BIGINT NOT NULL,
+  page_key VARCHAR(50) NOT NULL,
+  slug VARCHAR(150) NOT NULL,
+  custom_title VARCHAR(255),
+  is_published BOOLEAN DEFAULT 0,
+  FOREIGN KEY (tenant_theme_id) REFERENCES tenant_themes(tenant_theme_id) ON DELETE CASCADE
 );
 
 DROP TABLE IF EXISTS `tenant_sections`;

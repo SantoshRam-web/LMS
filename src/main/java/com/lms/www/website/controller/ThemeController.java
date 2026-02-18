@@ -131,4 +131,15 @@ public class ThemeController {
             throw new RuntimeException("Access denied. Super Admin only.");
         }
     }
+    
+    @DeleteMapping("/{tenantThemeId}")
+    public ResponseEntity<?> deleteDraftTheme(
+            @PathVariable Long tenantThemeId) {
+
+        themeService.deleteDraftTheme(tenantThemeId);
+
+        return ResponseEntity.ok(
+                Map.of("message", "Draft theme deleted successfully")
+        );
+    }
 }

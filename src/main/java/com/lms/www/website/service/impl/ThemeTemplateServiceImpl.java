@@ -1,7 +1,11 @@
 package com.lms.www.website.service.impl;
 
-import java.io.*;
-import java.nio.file.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -13,6 +17,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lms.www.service.ThemeTemplateService;
 
@@ -51,50 +56,76 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
                     Long.class
             );
 
-            // 2️⃣ Parse index.html (Homepage)
-            Path indexPath = Files.walk(tempDir)
-                    .filter(p -> p.getFileName().toString().equalsIgnoreCase("index.html"))
-                    .findFirst()
-                    .orElseThrow(() -> new RuntimeException("index.html not found"));
-
-            Document doc = Jsoup.parse(indexPath.toFile(), "UTF-8");
-
-            jdbcTemplate.update(
-                    "INSERT INTO theme_template_pages (theme_id, page_key) VALUES (?,?)",
-                    themeId,
-                    "HOME"
-            );
-
-            Long templatePageId = jdbcTemplate.queryForObject(
-                    "SELECT MAX(template_page_id) FROM theme_template_pages",
-                    Long.class
-            );
-
-            // 3️⃣ Extract sections (based on <section> tags)
-            Elements sections = doc.select("section");
-
-            int order = 1;
-
             ObjectMapper objectMapper = new ObjectMapper();
 
-            for (Element section : sections) {
+            // 2️⃣ Find ALL HTML files inside zip
+            List<Path> htmlFiles = Files.walk(tempDir)
+                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".html"))
+                    .toList();
 
-                String htmlContent = section.outerHtml();
+            if (htmlFiles.isEmpty()) {
+                throw new RuntimeException("No HTML pages found in theme");
+            }
 
-                // Convert HTML into valid JSON
-                String jsonConfig = objectMapper.writeValueAsString(
-                        java.util.Map.of("html", htmlContent)
-                );
+            for (Path htmlPath : htmlFiles) {
 
+                String fileName = htmlPath.getFileName().toString().toLowerCase();
+
+                // Generate page_key
+                String pageKey;
+                String slug; // ✅ Added
+
+                if (fileName.equals("index.html")) {
+                    pageKey = "HOME";
+                    slug = "/"; // ✅ Added
+                } else {
+                    String baseName = fileName.replace(".html", "");
+
+                    pageKey = baseName
+                            .replace("-", "_")
+                            .toUpperCase();
+
+                    slug = "/" + baseName.toLowerCase(); // ✅ Added
+                }
+
+                // Insert page (UPDATED — now includes slug)
                 jdbcTemplate.update(
-                        "INSERT INTO theme_template_sections " +
-                                "(template_page_id, section_type, default_config, display_order) " +
-                                "VALUES (?,?,?,?)",
-                        templatePageId,
-                        "CUSTOM",
-                        jsonConfig,
-                        order++
+                        "INSERT INTO theme_template_pages (theme_id, page_key, slug) VALUES (?,?,?)",
+                        themeId,
+                        pageKey,
+                        slug
                 );
+
+                Long templatePageId = jdbcTemplate.queryForObject(
+                        "SELECT MAX(template_page_id) FROM theme_template_pages",
+                        Long.class
+                );
+
+                // Parse HTML
+                Document doc = Jsoup.parse(htmlPath.toFile(), "UTF-8");
+
+                Elements sections = doc.select("section");
+
+                int order = 1;
+
+                for (Element section : sections) {
+
+                    String htmlContent = section.outerHtml();
+
+                    String jsonConfig = objectMapper.writeValueAsString(
+                            java.util.Map.of("html", htmlContent)
+                    );
+
+                    jdbcTemplate.update(
+                            "INSERT INTO theme_template_sections " +
+                                    "(template_page_id, section_type, default_config, display_order) " +
+                                    "VALUES (?,?,?,?)",
+                            templatePageId,
+                            "CUSTOM",
+                            jsonConfig,
+                            order++
+                    );
+                }
             }
 
         } catch (Exception e) {

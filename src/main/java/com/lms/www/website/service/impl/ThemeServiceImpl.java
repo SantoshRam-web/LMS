@@ -58,10 +58,11 @@ public class ThemeServiceImpl implements ThemeService {
         tenantTheme.setStatus("DRAFT");
         tenantTheme = tenantThemeRepository.save(tenantTheme);
 
-        // Fetch pages from MASTER
+        // 🔥 Fetch pages INCLUDING slug
         List<Map<String, Object>> pages =
                 jdbcTemplate.queryForList(
-                        "SELECT template_page_id, page_key FROM theme_template_pages WHERE theme_id = ?",
+                        "SELECT template_page_id, page_key, slug " +
+                        "FROM theme_template_pages WHERE theme_id = ?",
                         themeId
                 );
 
@@ -73,6 +74,7 @@ public class ThemeServiceImpl implements ThemeService {
             TenantPage tenantPage = new TenantPage();
             tenantPage.setTenantTheme(tenantTheme);
             tenantPage.setPageKey((String) pageRow.get("page_key"));
+            tenantPage.setSlug((String) pageRow.get("slug"));   // ✅ NEW
             tenantPage.setCustomTitle((String) pageRow.get("page_key"));
             tenantPage.setIsPublished(false);
             tenantPage = tenantPageRepository.save(tenantPage);
@@ -80,32 +82,32 @@ public class ThemeServiceImpl implements ThemeService {
             // Fetch sections from MASTER
             List<Map<String, Object>> sections =
                     jdbcTemplate.queryForList(
-                            "SELECT template_section_id, section_type, default_config, display_order\r\n"
-                            + "FROM theme_template_sections WHERE template_page_id = ?",
+                            "SELECT template_section_id, section_type, default_config, display_order " +
+                            "FROM theme_template_sections WHERE template_page_id = ?",
                             templatePageId
                     );
 
             for (Map<String, Object> sectionRow : sections) {
 
-            	Long templateSectionId =
-            	        ((Number) sectionRow.get("template_section_id")).longValue();
+                Long templateSectionId =
+                        ((Number) sectionRow.get("template_section_id")).longValue();
 
-            	TenantSection section = new TenantSection();
-            	section.setTenantPage(tenantPage);
-            	section.setTemplateSectionId(templateSectionId);   // ✅ IMPORTANT
-            	section.setSectionType((String) sectionRow.get("section_type"));
-            	section.setSectionConfig(
-            	        sectionRow.get("default_config") != null
-            	                ? sectionRow.get("default_config").toString()
-            	                : "{}"
-            	);
-            	section.setDisplayOrder(
-            	        sectionRow.get("display_order") != null
-            	                ? ((Number) sectionRow.get("display_order")).intValue()
-            	                : 0
-            	);
+                TenantSection section = new TenantSection();
+                section.setTenantPage(tenantPage);
+                section.setTemplateSectionId(templateSectionId);
+                section.setSectionType((String) sectionRow.get("section_type"));
+                section.setSectionConfig(
+                        sectionRow.get("default_config") != null
+                                ? sectionRow.get("default_config").toString()
+                                : "{}"
+                );
+                section.setDisplayOrder(
+                        sectionRow.get("display_order") != null
+                                ? ((Number) sectionRow.get("display_order")).intValue()
+                                : 0
+                );
 
-            	tenantSectionRepository.save(section);
+                tenantSectionRepository.save(section);
             }
         }
     }
@@ -121,7 +123,6 @@ public class ThemeServiceImpl implements ThemeService {
                 .findById(tenantThemeId)
                 .orElseThrow(() -> new RuntimeException("Theme not found"));
 
-        // Only one LIVE theme per tenant
         tenantThemeRepository.findByStatus("LIVE")
                 .ifPresent(existingLive -> {
                     existingLive.setStatus("DRAFT");
@@ -147,6 +148,7 @@ public class ThemeServiceImpl implements ThemeService {
                                 .stream()
                                 .map(page -> Map.of(
                                         "pageKey", page.getPageKey(),
+                                        "slug", page.getSlug(),          // ✅ NEW
                                         "title", page.getCustomTitle(),
                                         "sections",
                                         tenantSectionRepository
@@ -172,6 +174,7 @@ public class ThemeServiceImpl implements ThemeService {
                 tenantPageRepository.findByTenantTheme_TenantThemeId(tenantThemeId);
 
         return pages.stream().map(page -> {
+
             List<TenantSection> sections =
                     tenantSectionRepository
                             .findByTenantPage_TenantPageIdOrderByDisplayOrder(
@@ -180,6 +183,7 @@ public class ThemeServiceImpl implements ThemeService {
 
             return Map.of(
                     "pageKey", page.getPageKey(),
+                    "slug", page.getSlug(),          // ✅ NEW
                     "title", page.getCustomTitle(),
                     "sections", sections
             );
@@ -201,7 +205,7 @@ public class ThemeServiceImpl implements ThemeService {
     }
 
     // =========================================
-    // 7️⃣ Reset Section (Fetch from MASTER DB)
+    // 7️⃣ Reset Section
     // =========================================
     @Override
     @Transactional
@@ -215,7 +219,6 @@ public class ThemeServiceImpl implements ThemeService {
                 .getTenantTheme()
                 .getThemeTemplateId();
 
-        // Fetch template_page_id from MASTER
         Long templatePageId = jdbcTemplate.queryForObject(
                 "SELECT template_page_id FROM theme_template_pages " +
                 "WHERE theme_id = ? AND page_key = ?",
@@ -244,7 +247,7 @@ public class ThemeServiceImpl implements ThemeService {
     }
 
     // =========================================
-    // 8️⃣ Update Page Title
+    // 8️⃣ Update Page Title (Slug NOT editable)
     // =========================================
     @Override
     @Transactional
@@ -255,5 +258,33 @@ public class ThemeServiceImpl implements ThemeService {
 
         page.setCustomTitle(title);
         tenantPageRepository.save(page);
+    }
+
+    // =========================================
+    // 9️⃣ Delete Draft Theme
+    // =========================================
+    @Override
+    @Transactional
+    public void deleteDraftTheme(Long tenantThemeId) {
+
+        TenantTheme theme = tenantThemeRepository.findById(tenantThemeId)
+                .orElseThrow(() -> new RuntimeException("Theme not found"));
+
+        if (!"DRAFT".equalsIgnoreCase(theme.getStatus())) {
+            throw new RuntimeException("Only draft themes can be deleted");
+        }
+
+        List<TenantPage> pages =
+                tenantPageRepository.findByTenantTheme_TenantThemeId(tenantThemeId);
+
+        for (TenantPage page : pages) {
+            tenantSectionRepository
+                    .deleteByTenantPage_TenantPageId(page.getTenantPageId());
+        }
+
+        tenantPageRepository
+                .deleteByTenantTheme_TenantThemeId(tenantThemeId);
+
+        tenantThemeRepository.delete(theme);
     }
 }

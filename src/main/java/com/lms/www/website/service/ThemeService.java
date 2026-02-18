@@ -20,5 +20,6 @@ public interface ThemeService {
     void resetSection(Long sectionId);
     
     void updatePageTitle(Long pageId, String title);
-
+    
+    void deleteDraftTheme(Long tenantThemeId);
 }

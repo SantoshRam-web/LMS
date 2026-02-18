@@ -29,6 +29,9 @@ public class TenantPage {
     @Column(name = "page_key", nullable = false)
     private String pageKey;
     
+    @Column(name = "slug", nullable = false)
+    private String slug;
+    
     @Column(name = "custom_title")
     private String customTitle;
     

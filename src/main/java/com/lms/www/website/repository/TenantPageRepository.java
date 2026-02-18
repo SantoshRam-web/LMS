@@ -8,5 +8,7 @@ import com.lms.www.website.model.TenantPage;
 
 public interface TenantPageRepository extends JpaRepository<TenantPage, Long> {
 
-    List<TenantPage> findByTenantTheme_TenantThemeId(Long tenantThemeId);
+	void deleteByTenantTheme_TenantThemeId(Long tenantThemeId);
+	
+	List<TenantPage> findByTenantTheme_TenantThemeId(Long tenantThemeId);
 }
