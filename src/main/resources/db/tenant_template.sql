@@ -308,6 +308,8 @@ CREATE TABLE `tenant_themes` (
   `theme_template_id` BIGINT NOT NULL,
   `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT', -- DRAFT / LIVE
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `header_config` JSON NULL,
+   `footer_config` JSON NULL, 
   PRIMARY KEY (`tenant_theme_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

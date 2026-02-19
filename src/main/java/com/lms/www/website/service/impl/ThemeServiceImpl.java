@@ -51,7 +51,7 @@ public class ThemeServiceImpl implements ThemeService {
     // =========================================
     @Override
     @Transactional
-    public void applyTheme(Long themeId) {
+    public long applyTheme(Long themeId) {
 
         TenantTheme tenantTheme = new TenantTheme();
         tenantTheme.setThemeTemplateId(themeId);
@@ -110,6 +110,7 @@ public class ThemeServiceImpl implements ThemeService {
                 tenantSectionRepository.save(section);
             }
         }
+        return tenantTheme.getTenantThemeId();
     }
 
     // =========================================
@@ -256,6 +257,14 @@ public class ThemeServiceImpl implements ThemeService {
         TenantPage page = tenantPageRepository.findById(pageId)
                 .orElseThrow(() -> new RuntimeException("Page not found"));
 
+        // 🔥 Remove wrapping quotes if JSON string
+        if (title != null) {
+            title = title.trim();
+            if (title.startsWith("\"") && title.endsWith("\"")) {
+                title = title.substring(1, title.length() - 1);
+            }
+        }
+
         page.setCustomTitle(title);
         tenantPageRepository.save(page);
     }
@@ -286,5 +295,105 @@ public class ThemeServiceImpl implements ThemeService {
                 .deleteByTenantTheme_TenantThemeId(tenantThemeId);
 
         tenantThemeRepository.delete(theme);
+    }
+    
+    @Override
+    @Transactional
+    public void resetEntirePage(Long pageId) {
+
+        TenantPage page = tenantPageRepository.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        Long themeTemplateId = page.getTenantTheme().getThemeTemplateId();
+        String pageKey = page.getPageKey();
+
+        // 1️⃣ Reset Title
+        page.setCustomTitle(pageKey);
+        tenantPageRepository.save(page);
+
+        // 2️⃣ Delete all existing sections
+        tenantSectionRepository
+                .deleteByTenantPage_TenantPageId(pageId);
+
+        // 3️⃣ Get template_page_id from MASTER
+        Long templatePageId = jdbcTemplate.queryForObject(
+                "SELECT template_page_id FROM theme_template_pages " +
+                "WHERE theme_id = ? AND page_key = ?",
+                Long.class,
+                themeTemplateId,
+                pageKey
+        );
+
+        // 4️⃣ Fetch template sections
+        List<Map<String, Object>> templateSections =
+                jdbcTemplate.queryForList(
+                        "SELECT template_section_id, section_type, default_config, display_order " +
+                        "FROM theme_template_sections " +
+                        "WHERE template_page_id = ? ORDER BY display_order ASC",
+                        templatePageId
+                );
+
+        // 5️⃣ Recreate fresh sections
+        for (Map<String, Object> row : templateSections) {
+
+            TenantSection section = new TenantSection();
+            section.setTenantPage(page);
+            section.setTemplateSectionId(
+                    ((Number) row.get("template_section_id")).longValue()
+            );
+            section.setSectionType((String) row.get("section_type"));
+            section.setSectionConfig(
+                    row.get("default_config") != null
+                            ? row.get("default_config").toString()
+                            : "{}"
+            );
+            section.setDisplayOrder(
+                    row.get("display_order") != null
+                            ? ((Number) row.get("display_order")).intValue()
+                            : 0
+            );
+
+            tenantSectionRepository.save(section);
+        }
+    }
+    
+    @Override
+    @Transactional
+    public void updateHeaderConfig(Long tenantThemeId, String headerJson) {
+
+        TenantTheme theme = tenantThemeRepository.findById(tenantThemeId)
+                .orElseThrow(() -> new RuntimeException("Theme not found"));
+
+        theme.setHeaderConfig(headerJson);
+        tenantThemeRepository.save(theme);
+    }
+
+    @Override
+    public String getHeaderConfig(Long tenantThemeId) {
+
+        TenantTheme theme = tenantThemeRepository.findById(tenantThemeId)
+                .orElseThrow(() -> new RuntimeException("Theme not found"));
+
+        return theme.getHeaderConfig();
+    }
+    
+    @Override
+    public String getFooterConfig(Long tenantThemeId) {
+
+        TenantTheme theme = tenantThemeRepository.findById(tenantThemeId)
+                .orElseThrow(() -> new RuntimeException("Theme not found"));
+
+        return theme.getFooterConfig();
+    }
+    
+    @Override
+    @Transactional
+    public void saveFooterConfig(Long tenantThemeId, String configJson) {
+
+        TenantTheme theme = tenantThemeRepository.findById(tenantThemeId)
+                .orElseThrow(() -> new RuntimeException("Theme not found"));
+
+        theme.setFooterConfig(configJson);
+        tenantThemeRepository.save(theme);
     }
 }

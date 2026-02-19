@@ -31,4 +31,10 @@ public class TenantTheme {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
+    
+    @Column(name = "header_config", columnDefinition = "JSON")
+    private String headerConfig;
+    
+    @Column(name = "footer_config", columnDefinition = "JSON")
+    private String footerConfig;
 }

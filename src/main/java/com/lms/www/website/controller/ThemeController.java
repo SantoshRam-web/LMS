@@ -44,13 +44,18 @@ public class ThemeController {
     // 🔐 SUPER ADMIN – Apply theme (DRAFT)
     // =========================================
     @PostMapping("/apply/{themeId}")
-    public ResponseEntity<String> applyTheme(
+    public ResponseEntity<Map<String, Object>> applyTheme(
             @PathVariable Long themeId,
             HttpServletRequest request
     ) {
         enforceSuperAdmin(request);
-        themeService.applyTheme(themeId);
-        return ResponseEntity.ok("Theme applied as DRAFT");
+
+        Long newTenantThemeId = themeService.applyTheme(themeId);
+
+        return ResponseEntity.ok(Map.of(
+                "message", "Theme applied as DRAFT",
+                "tenantThemeId", newTenantThemeId
+        ));
     }
 
     // =========================================
@@ -140,6 +145,51 @@ public class ThemeController {
 
         return ResponseEntity.ok(
                 Map.of("message", "Draft theme deleted successfully")
+        );
+    }
+    
+    @PutMapping("/page/{pageId}/reset")
+    public ResponseEntity<?> resetEntirePage(@PathVariable Long pageId) {
+
+        themeService.resetEntirePage(pageId);
+
+        return ResponseEntity.ok(
+                Map.of("message", "Page reset to template default")
+        );
+    }
+    
+    @PutMapping("/{tenantThemeId}/header")
+    public ResponseEntity<?> updateHeader(
+            @PathVariable Long tenantThemeId,
+            @RequestBody String headerJson
+    ) {
+        themeService.updateHeaderConfig(tenantThemeId, headerJson);
+        return ResponseEntity.ok(Map.of("message", "Header updated"));
+    }
+
+    @GetMapping("/{tenantThemeId}/header")
+    public ResponseEntity<?> getHeader(
+            @PathVariable Long tenantThemeId
+    ) {
+        String header = themeService.getHeaderConfig(tenantThemeId);
+        return ResponseEntity.ok(header != null ? header : "{}");
+    }
+    
+    @PutMapping("/{tenantThemeId}/footer")
+    public ResponseEntity<?> saveFooter(
+            @PathVariable Long tenantThemeId,
+            @RequestBody String configJson
+    ) {
+        themeService.saveFooterConfig(tenantThemeId, configJson);
+        return ResponseEntity.ok(Map.of("message", "Footer saved"));
+    }
+    
+    @GetMapping("/{tenantThemeId}/footer")
+    public ResponseEntity<?> getFooter(
+            @PathVariable Long tenantThemeId
+    ) {
+        return ResponseEntity.ok(
+                themeService.getFooterConfig(tenantThemeId)
         );
     }
 }
