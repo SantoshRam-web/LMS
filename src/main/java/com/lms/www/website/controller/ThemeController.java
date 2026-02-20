@@ -192,4 +192,16 @@ public class ThemeController {
                 themeService.getFooterConfig(tenantThemeId)
         );
     }
+    
+    @PutMapping("/header/{tenantThemeId}")
+    public ResponseEntity<?> saveHeader(
+            @PathVariable Long tenantThemeId,
+            @RequestBody String headerJson
+    ) {
+        themeService.saveHeaderConfig(tenantThemeId, headerJson);
+
+        return ResponseEntity.ok(
+                Map.of("message", "Header configuration saved")
+        );
+    }
 }

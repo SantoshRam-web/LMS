@@ -396,4 +396,16 @@ public class ThemeServiceImpl implements ThemeService {
         theme.setFooterConfig(configJson);
         tenantThemeRepository.save(theme);
     }
+    
+    @Override
+    @Transactional
+    public void saveHeaderConfig(Long tenantThemeId, String headerJson) {
+
+        TenantTheme theme = tenantThemeRepository.findById(tenantThemeId)
+                .orElseThrow(() -> new RuntimeException("Theme not found"));
+
+        theme.setHeaderConfig(headerJson);
+
+        tenantThemeRepository.save(theme);
+    }
 }

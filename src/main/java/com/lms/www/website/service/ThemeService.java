@@ -31,4 +31,6 @@ public interface ThemeService {
     
     void saveFooterConfig(Long tenantThemeId, String configJson);
     String getFooterConfig(Long tenantThemeId);
+    
+    void saveHeaderConfig(Long tenantThemeId, String headerJson);
 }

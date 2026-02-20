@@ -310,6 +310,9 @@ CREATE TABLE `tenant_themes` (
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `header_config` JSON NULL,
    `footer_config` JSON NULL, 
+   `seo_config` JSON NULL,
+   `robots_txt` TEXT,
+   `sitemap_path` VARCHAR(500),
   PRIMARY KEY (`tenant_theme_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

@@ -37,4 +37,13 @@ public class TenantTheme {
     
     @Column(name = "footer_config", columnDefinition = "JSON")
     private String footerConfig;
+    
+    @Column(name = "seo_config", columnDefinition = "JSON")
+    private String seoConfig;
+
+    @Column(name = "robots_txt", columnDefinition = "TEXT")
+    private String robotsTxt;
+
+    @Column(name = "sitemap_path")
+    private String sitemapPath;
 }
