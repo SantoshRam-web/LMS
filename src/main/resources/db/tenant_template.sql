@@ -340,4 +340,17 @@ CREATE TABLE tenant_sections (
         ON DELETE CASCADE
 );
 
+DROP TABLE IF EXISTS `tenant_settings`;
+CREATE TABLE tenant_settings (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    site_name VARCHAR(255),
+    logo_path VARCHAR(500),
+    favicon_path VARCHAR(500),
+    footfall_enabled BOOLEAN DEFAULT FALSE,
+    store_view_type VARCHAR(50),
+    store_config JSON,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 SET FOREIGN_KEY_CHECKS = 1;
