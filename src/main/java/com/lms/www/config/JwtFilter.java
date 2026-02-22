@@ -111,10 +111,6 @@ public class JwtFilter extends OncePerRequestFilter {
     	
         String path = request.getRequestURI();
         
-        System.out.println("========== JWT FILTER ==========");
-        System.out.println("Request Path: " + path);
-        System.out.println("Host: " + request.getServerName());
-        System.out.println("Authorization Header: " + request.getHeader("Authorization"));
         boolean isLoginRequest = path.startsWith("/auth/login");
 
         try {
@@ -122,7 +118,6 @@ public class JwtFilter extends OncePerRequestFilter {
             // 1️⃣ Extract subdomain
             // ================================
             String subdomain = extractSubdomain(request);
-            System.out.println("Extracted Subdomain: " + subdomain);
 
             // ================================
             // 2️⃣ TENANT ENABLE CHECK (MASTER DB)

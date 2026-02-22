@@ -4,11 +4,16 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.lms.www.website.model.TenantSettings;
 import com.lms.www.website.repository.TenantSettingsRepository;
 import com.lms.www.website.service.SettingsService;
@@ -17,11 +22,14 @@ import com.lms.www.website.service.SettingsService;
 public class SettingsServiceImpl implements SettingsService {
 
     private final TenantSettingsRepository repository;
+    private final JdbcTemplate jdbcTemplate;
 
     private static final String BASE_UPLOAD_DIR = "uploads/";
 
-    public SettingsServiceImpl(TenantSettingsRepository repository) {
+    public SettingsServiceImpl(TenantSettingsRepository repository,
+    		JdbcTemplate jdbcTemplate) {
         this.repository = repository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     // Always fetch first row (one row per tenant DB)
@@ -97,13 +105,59 @@ public class SettingsServiceImpl implements SettingsService {
 
     @Override
     @Transactional
-    public void updateStoreTheme(String viewType, String configJson) {
+    public void updateStoreTheme(String viewType, String storeConfigJson) {
 
         TenantSettings settings = getOrCreateSettings();
-        settings.setStoreViewType(viewType);
-        settings.setStoreConfig(configJson);
+
+        // Validate viewType
+        if (!"LIST".equalsIgnoreCase(viewType) &&
+            !"CATEGORY".equalsIgnoreCase(viewType)) {
+            throw new RuntimeException("Invalid store view type");
+        }
+
+        // If category view, validate category IDs
+        if ("CATEGORY".equalsIgnoreCase(viewType) && storeConfigJson != null) {
+
+            // Very simple validation (no DTO)
+            List<Long> categoryIds = jdbcTemplate.queryForList(
+                    "SELECT category_id FROM categories",
+                    Long.class
+            );
+
+            for (Long id : extractCategoryIds(storeConfigJson)) {
+                if (!categoryIds.contains(id)) {
+                    throw new RuntimeException("Invalid category id: " + id);
+                }
+            }
+        }
+
+        settings.setStoreViewType(viewType.toUpperCase());
+        settings.setStoreConfig(storeConfigJson);
+
         repository.save(settings);
     }
+    
+    private List<Long> extractCategoryIds(String json) {
+
+        List<Long> ids = new ArrayList<>();
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.readTree(json);
+            JsonNode categories = root.get("categories");
+
+            if (categories != null && categories.isArray()) {
+                for (JsonNode node : categories) {
+                    ids.add(node.get("categoryId").asLong());
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Invalid store config JSON");
+        }
+
+        return ids;
+    }
+
 
     @Override
     public TenantSettings getSettings() {
