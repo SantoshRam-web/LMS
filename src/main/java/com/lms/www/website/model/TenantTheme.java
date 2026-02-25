@@ -35,6 +35,9 @@ public class TenantTheme {
     @Column(name = "header_config", columnDefinition = "JSON")
     private String headerConfig;
     
+    @Column(name = "default_header_config", columnDefinition = "JSON")
+    private String defaultHeaderConfig;
+    
     @Column(name = "footer_config", columnDefinition = "JSON")
     private String footerConfig;
     

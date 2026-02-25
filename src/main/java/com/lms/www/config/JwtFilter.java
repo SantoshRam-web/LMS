@@ -182,7 +182,6 @@ public class JwtFilter extends OncePerRequestFilter {
             // 6️⃣ EXTRACT TENANT DB FROM JWT
             // ================================
             String tenantDb = jwtUtil.extractTenantDb(token);
-            System.out.println("❌ tenantDb extracted is NULL");
             if (tenantDb == null) {
                 response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                 return;

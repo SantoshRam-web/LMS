@@ -309,6 +309,7 @@ CREATE TABLE `tenant_themes` (
   `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT', -- DRAFT / LIVE
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `header_config` JSON NULL,
+  `default_header_config` JSON NULL
    `footer_config` JSON NULL, 
    `seo_config` JSON NULL,
    `robots_txt` TEXT,
@@ -351,6 +352,12 @@ CREATE TABLE tenant_settings (
     store_config JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE tenant_headers (
+    tenant_header_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    header_config JSON NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 SET FOREIGN_KEY_CHECKS = 1;

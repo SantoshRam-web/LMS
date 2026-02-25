@@ -53,10 +53,23 @@ public class ThemeServiceImpl implements ThemeService {
     @Transactional
     public long applyTheme(Long themeId) {
 
-        TenantTheme tenantTheme = new TenantTheme();
-        tenantTheme.setThemeTemplateId(themeId);
-        tenantTheme.setStatus("DRAFT");
-        tenantTheme = tenantThemeRepository.save(tenantTheme);
+    	TenantTheme tenantTheme = new TenantTheme();
+    	tenantTheme.setThemeTemplateId(themeId);
+    	tenantTheme.setStatus("DRAFT");
+
+    	// 🔥 Initialize default header snapshot
+    	String defaultHeaderJson = """
+    	{
+    	  "builderType": "HEADER",
+    	  "mode": "THEME_DEFAULT",
+    	  "blocks": []
+    	}
+    	""";
+
+    	tenantTheme.setDefaultHeaderConfig(defaultHeaderJson);
+    	tenantTheme.setHeaderConfig(defaultHeaderJson);
+
+    	tenantTheme = tenantThemeRepository.save(tenantTheme);
 
         // 🔥 Fetch pages INCLUDING slug
         List<Map<String, Object>> pages =
