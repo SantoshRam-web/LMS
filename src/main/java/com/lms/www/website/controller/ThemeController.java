@@ -204,4 +204,41 @@ public class ThemeController {
                 Map.of("message", "Header configuration saved")
         );
     }
+    
+    @RestController
+    @RequestMapping("/website/page")
+    public class PageBuilderController {
+
+        private final ThemeService themeService;
+
+        public PageBuilderController(ThemeService themeService) {
+            this.themeService = themeService;
+        }
+
+        @PostMapping("/{pageId}/sections")
+        public ResponseEntity<?> addSection(
+                @PathVariable Long pageId,
+                @RequestBody Map<String, Long> body) {
+
+            themeService.addSection(pageId, body.get("templateSectionId"));
+            return ResponseEntity.ok("Section added");
+        }
+
+        @DeleteMapping("/section/{sectionId}")
+        public ResponseEntity<?> deleteSection(
+                @PathVariable Long sectionId) {
+
+            themeService.deleteSection(sectionId);
+            return ResponseEntity.ok("Section deleted");
+        }
+
+        @PutMapping("/{pageId}/sections/order")
+        public ResponseEntity<?> reorderSections(
+                @PathVariable Long pageId,
+                @RequestBody List<Long> sectionIds) {
+
+            themeService.reorderSections(pageId, sectionIds);
+            return ResponseEntity.ok("Sections reordered");
+        }
+    }
 }

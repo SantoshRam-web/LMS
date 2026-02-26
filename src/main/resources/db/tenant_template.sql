@@ -325,6 +325,7 @@ CREATE TABLE tenant_pages (
   slug VARCHAR(150) NOT NULL,
   custom_title VARCHAR(255),
   is_published BOOLEAN DEFAULT 0,
+  last_modified_at TIMESTAMP NULL,
   FOREIGN KEY (tenant_theme_id) REFERENCES tenant_themes(tenant_theme_id) ON DELETE CASCADE
 );
 

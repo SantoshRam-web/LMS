@@ -1,7 +1,9 @@
 package com.lms.www.website.service.impl;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -216,6 +218,11 @@ public class ThemeServiceImpl implements ThemeService {
 
         section.setSectionConfig(configJson);
         tenantSectionRepository.save(section);
+
+        // 🔥 Update page last modified
+        TenantPage page = section.getTenantPage();
+        page.setLastModifiedAt(LocalDateTime.now());
+        tenantPageRepository.save(page);
     }
 
     // =========================================
@@ -280,6 +287,7 @@ public class ThemeServiceImpl implements ThemeService {
 
         page.setCustomTitle(title);
         tenantPageRepository.save(page);
+        page.setLastModifiedAt(LocalDateTime.now());
     }
 
     // =========================================
@@ -365,6 +373,9 @@ public class ThemeServiceImpl implements ThemeService {
                             ? ((Number) row.get("display_order")).intValue()
                             : 0
             );
+            
+            page.setLastModifiedAt(LocalDateTime.now());
+            tenantPageRepository.save(page);
 
             tenantSectionRepository.save(section);
         }
@@ -420,5 +431,111 @@ public class ThemeServiceImpl implements ThemeService {
         theme.setHeaderConfig(headerJson);
 
         tenantThemeRepository.save(theme);
+    }
+    
+    @Override
+    @Transactional
+    public void addSection(Long pageId, Long templateSectionId) {
+
+        TenantPage page = tenantPageRepository.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        // Fetch template section from MASTER
+        Map<String, Object> templateSection =
+                jdbcTemplate.queryForMap(
+                        "SELECT section_type, default_config " +
+                        "FROM theme_template_sections " +
+                        "WHERE template_section_id = ?",
+                        templateSectionId
+                );
+
+        // Get max display order
+        Integer maxOrder = tenantSectionRepository
+                .findByTenantPage_TenantPageIdOrderByDisplayOrder(pageId)
+                .stream()
+                .map(TenantSection::getDisplayOrder)
+                .max(Integer::compareTo)
+                .orElse(0);
+
+        TenantSection newSection = new TenantSection();
+        newSection.setTenantPage(page);
+        newSection.setTemplateSectionId(templateSectionId);
+        newSection.setSectionType((String) templateSection.get("section_type"));
+        newSection.setSectionConfig(
+                templateSection.get("default_config") != null
+                        ? templateSection.get("default_config").toString()
+                        : "{}"
+        );
+        newSection.setDisplayOrder(maxOrder + 1);
+
+        tenantSectionRepository.save(newSection);
+
+        // Update last modified
+        page.setLastModifiedAt(LocalDateTime.now());
+        tenantPageRepository.save(page);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteSection(Long sectionId) {
+
+        TenantSection section = tenantSectionRepository.findById(sectionId)
+                .orElseThrow(() -> new RuntimeException("Section not found"));
+
+        Long pageId = section.getTenantPage().getTenantPageId();
+
+        tenantSectionRepository.delete(section);
+
+        // 🔥 Normalize display order
+        List<TenantSection> remaining =
+                tenantSectionRepository
+                        .findByTenantPage_TenantPageIdOrderByDisplayOrder(pageId);
+
+        for (int i = 0; i < remaining.size(); i++) {
+            remaining.get(i).setDisplayOrder(i + 1);
+        }
+
+        tenantSectionRepository.saveAll(remaining);
+
+        // Update last modified
+        TenantPage page = remaining.isEmpty()
+                ? section.getTenantPage()
+                : remaining.get(0).getTenantPage();
+
+        page.setLastModifiedAt(LocalDateTime.now());
+        tenantPageRepository.save(page);
+    }
+    
+    @Override
+    @Transactional
+    public void reorderSections(Long pageId, List<Long> sectionIds) {
+
+        List<TenantSection> sections =
+                tenantSectionRepository
+                        .findByTenantPage_TenantPageIdOrderByDisplayOrder(pageId);
+
+        Map<Long, TenantSection> sectionMap =
+                sections.stream()
+                        .collect(Collectors.toMap(
+                                TenantSection::getTenantSectionId,
+                                s -> s
+                        ));
+
+        for (int i = 0; i < sectionIds.size(); i++) {
+
+            TenantSection section = sectionMap.get(sectionIds.get(i));
+
+            if (section != null) {
+                section.setDisplayOrder(i + 1);
+            }
+        }
+
+        tenantSectionRepository.saveAll(sectionMap.values());
+
+        TenantPage page = tenantPageRepository.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        page.setLastModifiedAt(LocalDateTime.now());
+        tenantPageRepository.save(page);
     }
 }

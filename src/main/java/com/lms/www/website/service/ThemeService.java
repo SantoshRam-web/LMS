@@ -33,4 +33,11 @@ public interface ThemeService {
     String getFooterConfig(Long tenantThemeId);
     
     void saveHeaderConfig(Long tenantThemeId, String headerJson);
+    
+    void addSection(Long pageId, Long templateSectionId);
+    
+    void deleteSection(Long sectionId);
+    
+    void reorderSections(Long pageId, List<Long> sectionIds);
 }
+

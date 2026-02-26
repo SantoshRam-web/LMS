@@ -1,5 +1,7 @@
 package com.lms.www.website.model;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -37,4 +39,11 @@ public class TenantPage {
     
     @Column(name = "is_published")
     private Boolean isPublished = false;
+    
+    @Column(name = "last_modified_at")
+    private LocalDateTime lastModifiedAt;
+    
+    public void touch() {
+        this.lastModifiedAt = LocalDateTime.now();
+    }
 }
