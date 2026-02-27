@@ -160,8 +160,9 @@ public class ThemeServiceImpl implements ThemeService {
                         "tenantThemeId", live.getTenantThemeId(),
                         "pages",
                         tenantPageRepository
-                                .findByTenantTheme_TenantThemeId(live.getTenantThemeId())
-                                .stream()
+                        .findByTenantTheme_TenantThemeId(live.getTenantThemeId())
+                        .stream()
+                        .filter(page -> Boolean.TRUE.equals(page.getIsPublished()))
                                 .map(page -> Map.of(
                                         "pageKey", page.getPageKey(),
                                         "slug", page.getSlug(),          // ✅ NEW
@@ -536,6 +537,75 @@ public class ThemeServiceImpl implements ThemeService {
                 .orElseThrow(() -> new RuntimeException("Page not found"));
 
         page.setLastModifiedAt(LocalDateTime.now());
+        tenantPageRepository.save(page);
+    }
+    
+    @Override
+    public Map<String, Object> getPage(Long pageId) {
+
+        TenantPage page = tenantPageRepository.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        List<TenantSection> sections =
+                tenantSectionRepository
+                        .findByTenantPage_TenantPageIdOrderByDisplayOrder(pageId);
+
+        return Map.of(
+                "pageId", page.getTenantPageId(),
+                "pageKey", page.getPageKey(),
+                "slug", page.getSlug(),
+                "lastModifiedAt", page.getLastModifiedAt(),
+                "sections", sections
+        );
+    }
+    
+    @Override
+    @Transactional
+    public void unpublishTheme(Long tenantThemeId) {
+
+        TenantTheme theme = tenantThemeRepository.findById(tenantThemeId)
+                .orElseThrow(() -> new RuntimeException("Theme not found"));
+
+        theme.setStatus("DRAFT");
+        tenantThemeRepository.save(theme);
+    }
+    
+    @Override
+    public List<Map<String, Object>> getTemplateSections(String pageKey) {
+
+        return jdbcTemplate.queryForList(
+                "SELECT ts.template_section_id, ts.section_type, ts.default_config " +
+                "FROM theme_template_sections ts " +
+                "JOIN theme_template_pages tp " +
+                "ON ts.template_page_id = tp.template_page_id " +
+                "WHERE tp.page_key = ?",
+                pageKey
+        );
+    }
+    
+    @Override
+    @Transactional
+    public void publishPage(Long pageId) {
+
+        TenantPage page = tenantPageRepository.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        page.setIsPublished(true);
+        page.setLastModifiedAt(LocalDateTime.now());
+
+        tenantPageRepository.save(page);
+    }
+    
+    @Override
+    @Transactional
+    public void unpublishPage(Long pageId) {
+
+        TenantPage page = tenantPageRepository.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        page.setIsPublished(false);
+        page.setLastModifiedAt(LocalDateTime.now());
+
         tenantPageRepository.save(page);
     }
 }

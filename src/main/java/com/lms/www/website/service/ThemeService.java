@@ -38,6 +38,16 @@ public interface ThemeService {
     
     void deleteSection(Long sectionId);
     
+    Map<String, Object> getPage(Long pageId);
+
+    void unpublishTheme(Long tenantThemeId);
+    
+    List<Map<String, Object>> getTemplateSections(String pageKey);
+    
+    void publishPage(Long pageId);
+
+    void unpublishPage(Long pageId);
+    
     void reorderSections(Long pageId, List<Long> sectionIds);
 }
 
