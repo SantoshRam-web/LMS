@@ -46,6 +46,7 @@ public class SecurityConfig {
             	    .requestMatchers("/auth/password-reset/**").permitAll()
             	    .requestMatchers("/auth/account-unlock/**").permitAll()
             	    .requestMatchers("/platform/**").permitAll()
+            	    .requestMatchers("/s/pages/**").permitAll()
 
             	    // 🔓 SUPER ADMIN SIGNUP (ONLY OTP FLOW)
             	    .requestMatchers("/super-admin/signup/**").permitAll()
