@@ -361,4 +361,29 @@ CREATE TABLE tenant_headers (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE tenant_custom_pages (
+    tenant_custom_page_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) NOT NULL UNIQUE,
+    meta_title VARCHAR(255),
+    meta_description TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE tenant_custom_page_sections (
+    tenant_custom_page_section_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    tenant_custom_page_id BIGINT NOT NULL,
+    section_type VARCHAR(100) NOT NULL,
+    section_config JSON,
+    display_order INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_custom_page
+        FOREIGN KEY (tenant_custom_page_id)
+        REFERENCES tenant_custom_pages(tenant_custom_page_id)
+        ON DELETE CASCADE
+);
+
 SET FOREIGN_KEY_CHECKS = 1;

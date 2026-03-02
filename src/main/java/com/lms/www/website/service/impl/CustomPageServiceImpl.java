@@ -1,14 +1,19 @@
 package com.lms.www.website.service.impl;
 
-import org.springframework.stereotype.Service;
-import lombok.RequiredArgsConstructor;
+import java.text.Normalizer;
+import java.util.List;
+import java.util.Map;
 
-import com.lms.www.website.model.*;
-import com.lms.www.website.repository.*;
+import org.springframework.stereotype.Service;
+
+import com.lms.www.website.model.TenantCustomPage;
+import com.lms.www.website.model.TenantCustomPageSection;
+import com.lms.www.website.repository.TenantCustomPageRepository;
+import com.lms.www.website.repository.TenantCustomPageSectionRepository;
 import com.lms.www.website.service.CustomPageService;
 
-import java.util.*;
-import java.text.Normalizer;
+import org.springframework.transaction.annotation.Transactional;
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -19,8 +24,24 @@ public class CustomPageServiceImpl implements CustomPageService {
 
     // ---------- CREATE PAGE ----------
     @Override
-    public Map<String, Object> createPage(String title) {
-        String slug = generateUniqueSlug(title);
+    @Transactional
+    public Long createPage(String title, String slug) {
+
+        if (title == null || title.isBlank()) {
+            throw new RuntimeException("Title is required");
+        }
+
+        if (slug == null || slug.isBlank()) {
+            throw new RuntimeException("Slug is required");
+        }
+
+        // normalize slug
+        slug = slug.trim().toLowerCase().replaceAll("\\s+", "-");
+
+        // check duplicate slug
+        if (pageRepo.findBySlug(slug).isPresent()) {
+            throw new RuntimeException("Slug already exists");
+        }
 
         TenantCustomPage page = new TenantCustomPage();
         page.setTitle(title);
@@ -29,7 +50,7 @@ public class CustomPageServiceImpl implements CustomPageService {
 
         pageRepo.save(page);
 
-        return Map.of("pageId", page.getTenantCustomPageId(), "slug", slug);
+        return page.getTenantCustomPageId();
     }
 
     // ---------- COPY PAGE ----------
@@ -104,6 +125,7 @@ public class CustomPageServiceImpl implements CustomPageService {
 
     // ---------- RESET ----------
     @Override
+    @Transactional
     public void resetPage(Long pageId) {
         sectionRepo.deleteByTenantCustomPage_TenantCustomPageId(pageId);
     }

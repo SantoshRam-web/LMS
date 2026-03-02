@@ -1,10 +1,22 @@
 package com.lms.www.website.controller;
 
-import org.springframework.web.bind.annotation.*;
-import lombok.RequiredArgsConstructor;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import com.lms.www.website.service.CustomPageService;
+
+import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/website/custom-page")
@@ -14,8 +26,12 @@ public class CustomPageController {
     private final CustomPageService service;
 
     @PostMapping
-    public Map<String, Object> create(@RequestBody Map<String, String> body) {
-        return service.createPage(body.get("title"));
+    public ResponseEntity<?> createPage(@RequestBody Map<String, String> body) {
+
+        String title = body.get("title");
+        String slug = body.get("slug");
+
+        return ResponseEntity.ok(service.createPage(title, slug));
     }
 
     @PostMapping("/{id}/copy")

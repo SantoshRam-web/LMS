@@ -5,7 +5,7 @@ import java.util.List;
 
 public interface CustomPageService {
 
-    Map<String, Object> createPage(String title);
+	Long createPage(String title, String slug);
 
     Map<String, Object> copyPage(Long pageId);
 
