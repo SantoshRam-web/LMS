@@ -28,4 +28,10 @@ public interface CustomPageService {
     void deleteSection(Long sectionId);
 
     void reorderSections(Long pageId, List<Long> orderedSectionIds);
+
+    Map<String, Object> getPageBuilder(Long pageId);
+    
+    void savePage(Long pageId);
+    
+    Map<String, Object> previewPage(Long pageId);
 }

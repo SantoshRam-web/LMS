@@ -97,4 +97,20 @@ public class CustomPageController {
                         @RequestBody List<Long> orderedIds) {
         service.reorderSections(id, orderedIds);
     }
+    
+    @GetMapping("/{pageId}/builder")
+    public ResponseEntity<?> getPageBuilder(@PathVariable Long pageId) {
+        return ResponseEntity.ok(service.getPageBuilder(pageId));
+    }
+    
+    @PutMapping("/{pageId}/save")
+    public ResponseEntity<?> savePage(@PathVariable Long pageId) {
+        service.savePage(pageId);
+        return ResponseEntity.ok().build();
+    }
+    
+    @GetMapping("/{pageId}/preview")
+    public ResponseEntity<?> previewPage(@PathVariable Long pageId) {
+        return ResponseEntity.ok(service.previewPage(pageId));
+    }
 }

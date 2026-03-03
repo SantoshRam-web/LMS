@@ -1,10 +1,15 @@
 package com.lms.www.website.service.impl;
 
 import java.text.Normalizer;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.website.model.TenantCustomPage;
 import com.lms.www.website.model.TenantCustomPageSection;
@@ -12,7 +17,6 @@ import com.lms.www.website.repository.TenantCustomPageRepository;
 import com.lms.www.website.repository.TenantCustomPageSectionRepository;
 import com.lms.www.website.service.CustomPageService;
 
-import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -192,5 +196,89 @@ public class CustomPageServiceImpl implements CustomPageService {
         }
 
         return slug;
+    }
+    
+    private void touchPage(Long pageId) {
+        TenantCustomPage page = pageRepo.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        // trigger dirty update
+        page.setUpdatedAt(LocalDateTime.now());
+        pageRepo.save(page);
+    }
+    
+    @Override
+    public Map<String, Object> getPageBuilder(Long pageId) {
+
+        TenantCustomPage page = pageRepo.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        List<TenantCustomPageSection> sections =
+                sectionRepo.findByTenantCustomPage_TenantCustomPageIdOrderByDisplayOrderAsc(pageId);
+
+        if (sections == null) {
+            sections = new ArrayList<>();
+        }
+
+        List<Map<String, Object>> sectionList = sections.stream()
+                .map(sec -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("sectionId", sec.getTenantCustomPageSectionId());
+                    m.put("sectionType", sec.getSectionType());
+                    m.put("sectionConfig", sec.getSectionConfig());
+                    m.put("displayOrder", sec.getDisplayOrder());
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("pageId", page.getTenantCustomPageId());
+        response.put("title", page.getTitle());
+        response.put("slug", page.getSlug());
+        response.put("status", page.getStatus());
+        response.put("sections", sectionList);
+        response.put("lastModified", page.getUpdatedAt());
+        return response;
+    }
+    
+    @Override
+    public void savePage(Long pageId) {
+        TenantCustomPage page = pageRepo.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        page.setUpdatedAt(LocalDateTime.now());
+        pageRepo.save(page);
+    }
+    
+    @Override
+    public Map<String, Object> previewPage(Long pageId) {
+
+        TenantCustomPage page = pageRepo.findById(pageId)
+                .orElseThrow(() -> new RuntimeException("Page not found"));
+
+        List<TenantCustomPageSection> sections =
+                sectionRepo.findByTenantCustomPage_TenantCustomPageIdOrderByDisplayOrderAsc(pageId);
+
+        if (sections == null) {
+            sections = new ArrayList<>();
+        }
+
+        List<Map<String, Object>> sectionList = sections.stream()
+                .map(sec -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("sectionType", sec.getSectionType());
+                    m.put("sectionConfig", sec.getSectionConfig());
+                    m.put("displayOrder", sec.getDisplayOrder());
+                    return m;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("title", page.getTitle());
+        response.put("slug", page.getSlug());
+        response.put("status", page.getStatus());
+        response.put("sections", sectionList);
+
+        return response;
     }
 }

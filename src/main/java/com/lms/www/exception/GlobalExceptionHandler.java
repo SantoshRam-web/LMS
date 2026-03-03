@@ -48,4 +48,16 @@ public class GlobalExceptionHandler {
             return message;
         }
     }
+    
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleAllExceptions(Exception ex) {
+
+        ex.printStackTrace(); // VERY IMPORTANT (temporary debugging)
+
+        return ResponseEntity
+                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ApiError(
+                        ex.getClass().getName() + " : " + ex.getMessage()
+                ));
+    }
 }
