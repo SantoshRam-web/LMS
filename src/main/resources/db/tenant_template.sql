@@ -304,17 +304,17 @@ CREATE TABLE `otp_verification` (
 
 DROP TABLE IF EXISTS `tenant_themes`;
 CREATE TABLE `tenant_themes` (
-  `tenant_theme_id` BIGINT NOT NULL AUTO_INCREMENT,
-  `theme_template_id` BIGINT NOT NULL,
-  `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT', -- DRAFT / LIVE
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `header_config` JSON NULL,
-  `default_header_config` JSON NULL
-   `footer_config` JSON NULL, 
-   `seo_config` JSON NULL,
-   `robots_txt` TEXT,
-   `sitemap_path` VARCHAR(500),
-  PRIMARY KEY (`tenant_theme_id`)
+ `tenant_theme_id` BIGINT NOT NULL AUTO_INCREMENT,
+ `theme_template_id` BIGINT NOT NULL,
+ `status` VARCHAR(20) NOT NULL DEFAULT 'DRAFT',
+ `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+ `header_config` JSON NULL,
+ `default_header_config` JSON NULL,
+ `footer_config` JSON NULL,
+ `seo_config` JSON NULL,
+ `robots_txt` TEXT,
+ `sitemap_path` VARCHAR(500),
+ PRIMARY KEY (`tenant_theme_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS `tenant_pages`;
