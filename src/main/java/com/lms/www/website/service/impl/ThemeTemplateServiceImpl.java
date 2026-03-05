@@ -42,6 +42,12 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
             Path tempDir = Files.createTempDirectory("theme-import");
 
             unzip(file.getInputStream(), tempDir);
+            
+            System.out.println("===== Extracted Theme Structure =====");
+
+            Files.walk(tempDir).forEach(path -> {
+                System.out.println(path.toString());
+            });
 
             // 1️⃣ Insert theme template
             jdbcTemplate.update(
@@ -104,13 +110,30 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
                 // Parse HTML
                 Document doc = Jsoup.parse(htmlPath.toFile(), "UTF-8");
 
-                Elements sections = doc.select("section");
+                Elements sections = doc.select("body > section, body > div.container-fluid");
 
                 int order = 1;
 
                 for (Element section : sections) {
 
-                    String htmlContent = section.outerHtml();
+                	String htmlContent = section.outerHtml();
+
+                	htmlContent = htmlContent
+                	        .replace("href=\"index.html\"", "href=\"/\"")
+                	        .replace("href=\"about.html\"", "href=\"/about\"")
+                	        .replace("href=\"course.html\"", "href=\"/course\"")
+                	        .replace("href=\"menu.html\"", "href=\"/course\"")
+                	        .replace("href=\"team.html\"", "href=\"/team\"")
+                	        .replace("href=\"testimonial.html\"", "href=\"/testimonial\"")
+                	        .replace("href=\"contact.html\"", "href=\"/contact\"")
+                	        .replace("src=\"img/", "src=\"/themes/" + themeId + "/img/")
+                	        .replace("href=\"css/", "href=\"/themes/" + themeId + "/css/")
+                	        .replace("src=\"js/", "src=\"/themes/" + themeId + "/js/")
+                	        .replace("href=\"assets/", "href=\"/themes/" + themeId + "/assets/")
+                	        .replace("src=\"assets/", "src=\"/themes/" + themeId + "/assets/")
+                	        .replace("src=\"images/", "src=\"/themes/" + themeId + "/images/")
+                	        .replace("href=\"lib/", "href=\"/themes/" + themeId + "/lib/")
+                	        .replace("src=\"lib/", "src=\"/themes/" + themeId + "/lib/");
 
                     String jsonConfig = objectMapper.writeValueAsString(
                             java.util.Map.of("html", htmlContent)
