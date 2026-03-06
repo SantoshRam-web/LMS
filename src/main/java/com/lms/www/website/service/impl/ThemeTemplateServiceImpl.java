@@ -2,10 +2,8 @@ package com.lms.www.website.service.impl;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
-import java.util.List;
+import java.nio.file.*;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -39,17 +37,18 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
     ) {
 
         try {
+
             Path tempDir = Files.createTempDirectory("theme-import");
 
             unzip(file.getInputStream(), tempDir);
-            
-            System.out.println("===== Extracted Theme Structure =====");
 
-            Files.walk(tempDir).forEach(path -> {
-                System.out.println(path.toString());
-            });
+            Path themeRoot = Files.list(tempDir)
+                    .filter(Files::isDirectory)
+                    .findFirst()
+                    .orElse(tempDir);
 
-            // 1️⃣ Insert theme template
+            String rootFolder = themeRoot.getFileName().toString();
+
             jdbcTemplate.update(
                     "INSERT INTO theme_templates (name, description, version) VALUES (?,?,?)",
                     name,
@@ -62,39 +61,103 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
                     Long.class
             );
 
+            Path themeStorage = Path.of("uploads/themes/" + themeId);
+
+            Files.createDirectories(themeStorage);
+
+            /*
+             * 🔥 FIX 1
+             * Copy ONLY themeRoot (not tempDir)
+             */
+            Files.walk(themeRoot).forEach(source -> {
+
+                try {
+
+                    Path destination =
+                            themeStorage.resolve(themeRoot.relativize(source));
+
+                    if (Files.isDirectory(source)) {
+
+                        Files.createDirectories(destination);
+
+                    } else {
+
+                        Files.copy(
+                                source,
+                                destination,
+                                StandardCopyOption.REPLACE_EXISTING
+                        );
+                    }
+
+                } catch (IOException e) {
+                    throw new RuntimeException("Asset copy failed", e);
+                }
+
+            });
+
+            /*
+             * PREVIEW IMAGE
+             */
+
+            Path previewImage = Files.walk(themeRoot)
+                    .filter(p -> {
+                        String n = p.getFileName().toString().toLowerCase();
+                        return n.contains("preview")
+                                || n.contains("screenshot")
+                                || n.endsWith(".jpg")
+                                || n.endsWith(".png");
+                    })
+                    .findFirst()
+                    .orElse(null);
+
+            if (previewImage != null) {
+
+                Path previewTarget =
+                        Path.of("uploads/themes/" + themeId + "/preview.jpg");
+
+                Files.copy(
+                        previewImage,
+                        previewTarget,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+
+                jdbcTemplate.update(
+                        "UPDATE theme_templates SET preview_image_url=? WHERE theme_id=?",
+                        "/themes/" + themeId + "/preview.jpg",
+                        themeId
+                );
+            }
+
             ObjectMapper objectMapper = new ObjectMapper();
 
-            // 2️⃣ Find ALL HTML files inside zip
-            List<Path> htmlFiles = Files.walk(tempDir)
-                    .filter(p -> p.getFileName().toString().toLowerCase().endsWith(".html"))
+            List<Path> htmlFiles = Files.walk(themeRoot)
+                    .filter(p -> p.toString().endsWith(".html"))
                     .toList();
 
             if (htmlFiles.isEmpty()) {
-                throw new RuntimeException("No HTML pages found in theme");
+                throw new RuntimeException("No HTML pages found");
             }
 
             for (Path htmlPath : htmlFiles) {
 
-                String fileName = htmlPath.getFileName().toString().toLowerCase();
+                String fileName = htmlPath.getFileName().toString();
 
-                // Generate page_key
                 String pageKey;
-                String slug; // ✅ Added
+                String slug;
 
-                if (fileName.equals("index.html")) {
+                if (fileName.equalsIgnoreCase("index.html")) {
+
                     pageKey = "HOME";
-                    slug = "/"; // ✅ Added
+                    slug = "/";
+
                 } else {
-                    String baseName = fileName.replace(".html", "");
 
-                    pageKey = baseName
-                            .replace("-", "_")
-                            .toUpperCase();
+                    String base = fileName.replace(".html", "");
 
-                    slug = "/" + baseName.toLowerCase(); // ✅ Added
+                    pageKey = base.replace("-", "_").toUpperCase();
+                    slug = "/" + base.toLowerCase();
                 }
 
-                // Insert page (UPDATED — now includes slug)
                 jdbcTemplate.update(
                         "INSERT INTO theme_template_pages (theme_id, page_key, slug) VALUES (?,?,?)",
                         themeId,
@@ -107,36 +170,20 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
                         Long.class
                 );
 
-                // Parse HTML
                 Document doc = Jsoup.parse(htmlPath.toFile(), "UTF-8");
 
-                Elements sections = doc.select("body > section, body > div.container-fluid");
+                rewriteAssetPaths(doc, themeId);
+
+                List<Element> sections = detectSections(doc);
 
                 int order = 1;
 
                 for (Element section : sections) {
 
-                	String htmlContent = section.outerHtml();
-
-                	htmlContent = htmlContent
-                	        .replace("href=\"index.html\"", "href=\"/\"")
-                	        .replace("href=\"about.html\"", "href=\"/about\"")
-                	        .replace("href=\"course.html\"", "href=\"/course\"")
-                	        .replace("href=\"menu.html\"", "href=\"/course\"")
-                	        .replace("href=\"team.html\"", "href=\"/team\"")
-                	        .replace("href=\"testimonial.html\"", "href=\"/testimonial\"")
-                	        .replace("href=\"contact.html\"", "href=\"/contact\"")
-                	        .replace("src=\"img/", "src=\"/themes/" + themeId + "/img/")
-                	        .replace("href=\"css/", "href=\"/themes/" + themeId + "/css/")
-                	        .replace("src=\"js/", "src=\"/themes/" + themeId + "/js/")
-                	        .replace("href=\"assets/", "href=\"/themes/" + themeId + "/assets/")
-                	        .replace("src=\"assets/", "src=\"/themes/" + themeId + "/assets/")
-                	        .replace("src=\"images/", "src=\"/themes/" + themeId + "/images/")
-                	        .replace("href=\"lib/", "href=\"/themes/" + themeId + "/lib/")
-                	        .replace("src=\"lib/", "src=\"/themes/" + themeId + "/lib/");
+                    String htmlContent = section.outerHtml();
 
                     String jsonConfig = objectMapper.writeValueAsString(
-                            java.util.Map.of("html", htmlContent)
+                            Map.of("html", htmlContent)
                     );
 
                     jdbcTemplate.update(
@@ -152,14 +199,76 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
             }
 
         } catch (Exception e) {
+
             e.printStackTrace();
+
             throw new RuntimeException("Theme import failed: " + e.getMessage());
         }
+    }
+
+    /*
+     * 🔥 FIX 2
+     * Rewrite ALL asset paths correctly
+     */
+
+    private void rewriteAssetPaths(Document doc, Long themeId) {
+
+        Elements assets = doc.select("[src], [href]");
+
+        for (Element el : assets) {
+
+            String attr = el.hasAttr("src") ? "src" : "href";
+
+            String val = el.attr(attr);
+
+            if (val.startsWith("http")
+                    || val.startsWith("https")
+                    || val.startsWith("data:")
+                    || val.startsWith("#")
+                    || val.startsWith("mailto:")
+                    || val.startsWith("tel:")
+                    || val.startsWith("/themes/")) {
+                continue;
+            }
+
+            el.attr(attr, "/themes/" + themeId + "/" + val);
+        }
+    }
+
+    private List<Element> detectSections(Document doc) {
+
+        List<Element> sections = new ArrayList<>();
+
+        Elements found = doc.select("section");
+
+        if (!found.isEmpty()) {
+            sections.addAll(found);
+            return sections;
+        }
+
+        found = doc.select("div.container, div.container-fluid");
+
+        if (!found.isEmpty()) {
+            sections.addAll(found);
+            return sections;
+        }
+
+        for (Element child : doc.body().children()) {
+
+            if (!child.tagName().equalsIgnoreCase("script")
+                    && !child.tagName().equalsIgnoreCase("style")) {
+
+                sections.add(child);
+            }
+        }
+
+        return sections;
     }
 
     private void unzip(InputStream zipStream, Path targetDir) throws IOException {
 
         try (ZipInputStream zis = new ZipInputStream(zipStream)) {
+
             ZipEntry entry;
 
             while ((entry = zis.getNextEntry()) != null) {
@@ -167,9 +276,13 @@ public class ThemeTemplateServiceImpl implements ThemeTemplateService {
                 Path newPath = targetDir.resolve(entry.getName());
 
                 if (entry.isDirectory()) {
+
                     Files.createDirectories(newPath);
+
                 } else {
+
                     Files.createDirectories(newPath.getParent());
+
                     Files.copy(zis, newPath, StandardCopyOption.REPLACE_EXISTING);
                 }
             }
