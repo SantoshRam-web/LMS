@@ -171,6 +171,171 @@ CREATE TABLE `conductor` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =====================
+-- accountant
+-- =====================
+DROP TABLE IF EXISTS `accountant`;
+CREATE TABLE `accountant` (
+  `accountant_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`accountant_id`),
+  UNIQUE KEY `uk_accountant_user` (`user_id`),
+  CONSTRAINT `fk_accountant_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- affiliate
+-- =====================
+DROP TABLE IF EXISTS `affiliate`;
+CREATE TABLE `affiliate` (
+  `affiliate_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`affiliate_id`),
+  UNIQUE KEY `uk_affiliate_user` (`user_id`),
+  CONSTRAINT `fk_affiliate_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- community_manager
+-- =====================
+DROP TABLE IF EXISTS `community_manager`;
+CREATE TABLE `community_manager` (
+  `community_manager_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`community_manager_id`),
+  UNIQUE KEY `uk_community_manager_user` (`user_id`),
+  CONSTRAINT `fk_community_manager_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- department_head
+-- =====================
+DROP TABLE IF EXISTS `department_head`;
+CREATE TABLE `department_head` (
+  `department_head_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`department_head_id`),
+  UNIQUE KEY `uk_department_head_user` (`user_id`),
+  CONSTRAINT `fk_department_head_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- evaluator
+-- =====================
+DROP TABLE IF EXISTS `evaluator`;
+CREATE TABLE `evaluator` (
+  `evaluator_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`evaluator_id`),
+  UNIQUE KEY `uk_evaluator_user` (`user_id`),
+  CONSTRAINT `fk_evaluator_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- inventory_manager
+-- =====================
+DROP TABLE IF EXISTS `inventory_manager`;
+CREATE TABLE `inventory_manager` (
+  `inventory_manager_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`inventory_manager_id`),
+  UNIQUE KEY `uk_inventory_manager_user` (`user_id`),
+  CONSTRAINT `fk_inventory_manager_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- librarian
+-- =====================
+DROP TABLE IF EXISTS `librarian`;
+CREATE TABLE `librarian` (
+  `librarian_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`librarian_id`),
+  UNIQUE KEY `uk_librarian_user` (`user_id`),
+  CONSTRAINT `fk_librarian_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- marketing_manager
+-- =====================
+DROP TABLE IF EXISTS `marketing_manager`;
+CREATE TABLE `marketing_manager` (
+  `marketing_manager_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`marketing_manager_id`),
+  UNIQUE KEY `uk_marketing_manager_user` (`user_id`),
+  CONSTRAINT `fk_marketing_manager_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- mentor
+-- =====================
+DROP TABLE IF EXISTS `mentor`;
+CREATE TABLE `mentor` (
+  `mentor_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`mentor_id`),
+  UNIQUE KEY `uk_mentor_user` (`user_id`),
+  CONSTRAINT `fk_mentor_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- transport_manager
+-- =====================
+DROP TABLE IF EXISTS `transport_manager`;
+CREATE TABLE `transport_manager` (
+  `transport_manager_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`transport_manager_id`),
+  UNIQUE KEY `uk_transport_manager_user` (`user_id`),
+  CONSTRAINT `fk_transport_manager_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
+-- warden
+-- =====================
+DROP TABLE IF EXISTS `warden`;
+CREATE TABLE `warden` (
+  `warden_id` BIGINT NOT NULL AUTO_INCREMENT,
+  `user_id` BIGINT NOT NULL,
+  PRIMARY KEY (`warden_id`),
+  UNIQUE KEY `uk_warden_user` (`user_id`),
+  CONSTRAINT `fk_warden_user`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =====================
 -- audit_logs
 -- =====================
 DROP TABLE IF EXISTS `audit_logs`;
