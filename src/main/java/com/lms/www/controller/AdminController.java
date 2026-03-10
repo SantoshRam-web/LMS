@@ -14,12 +14,23 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.lms.www.controller.request.AccountantRequest;
+import com.lms.www.controller.request.AffiliateRequest;
+import com.lms.www.controller.request.CommunityManagerRequest;
 import com.lms.www.controller.request.ConductorRequest;
+import com.lms.www.controller.request.DepartmentHeadRequest;
 import com.lms.www.controller.request.DriverRequest;
+import com.lms.www.controller.request.EvaluatorRequest;
 import com.lms.www.controller.request.InstructorRequest;
+import com.lms.www.controller.request.InventoryManagerRequest;
+import com.lms.www.controller.request.LibrarianRequest;
+import com.lms.www.controller.request.MarketingManagerRequest;
+import com.lms.www.controller.request.MentorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
+import com.lms.www.controller.request.TransportManagerRequest;
 import com.lms.www.controller.request.UserPermissionRequest;
+import com.lms.www.controller.request.WardenRequest;
 import com.lms.www.model.Address;
 import com.lms.www.model.User;
 import com.lms.www.service.AccountUnlockService;
@@ -88,6 +99,105 @@ public class AdminController {
     ) {
         adminService.createConductor(request, getLoggedInUser(), httpRequest);
         return ResponseEntity.ok("Conductor created successfully");
+    }
+    
+    @PostMapping("/accountants")
+    public ResponseEntity<String> createAccountant(
+            @RequestBody AccountantRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createAccountant(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Accountant created successfully");
+    }
+    
+    @PostMapping("/affiliates")
+    public ResponseEntity<String> createAffiliate(
+            @RequestBody AffiliateRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createAffiliate(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Affiliate created successfully");
+    }
+    
+    @PostMapping("/community-manager")
+    public ResponseEntity<String> createCommunityManager(
+            @RequestBody CommunityManagerRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createCommunityManager(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Community Manager created successfully");
+    }
+    
+    @PostMapping("/department-head")
+    public ResponseEntity<String> createDepartmentHead(
+            @RequestBody DepartmentHeadRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createDepartmentHead(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Department Head created successfully");
+    }
+    
+    @PostMapping("/evaluator")
+    public ResponseEntity<String> createEvaluator(
+            @RequestBody EvaluatorRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createEvaluator(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Evaluator created successfully");
+    }
+    
+    @PostMapping("/inventory-manager")
+    public ResponseEntity<String> createInventoryManager(
+            @RequestBody InventoryManagerRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createInventoryManager(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Inventory Manager created successfully");
+    }
+    
+    @PostMapping("/librarian")
+    public ResponseEntity<String> createLibrarian(
+            @RequestBody LibrarianRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createLibrarian(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Librarian created successfully");
+    }
+    
+    @PostMapping("/marketing-manager")
+    public ResponseEntity<String> createMarketingManager(
+            @RequestBody MarketingManagerRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createMarketingManager(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Marketing Manager created successfully");
+    }
+    
+    @PostMapping("/mentor")
+    public ResponseEntity<String> createMentor(
+            @RequestBody MentorRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createMentor(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Mentor created successfully");
+    }
+    
+    @PostMapping("/transport-manager")
+    public ResponseEntity<String> createTransportManager(
+            @RequestBody TransportManagerRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createTransportManager(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Transport Manager created successfully");
+    }
+    
+    @PostMapping("/warden")
+    public ResponseEntity<String> createWarden(
+            @RequestBody WardenRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        adminService.createWarden(request, getLoggedInUser(), httpRequest);
+        return ResponseEntity.ok("Warden created successfully");
     }
 
     // ---------- READ ----------
@@ -175,6 +285,127 @@ public class AdminController {
     @GetMapping("/getconductors/{conductorId}")
     public ResponseEntity<?> getConductorById(@PathVariable Long conductorId) {
         return ResponseEntity.ok(adminService.getConductorByConductorId(conductorId));
+    }
+    
+ // ---------- ACCOUNTANTS ----------
+    @GetMapping("/getaccountants")
+    public ResponseEntity<?> getAllAccountants() {
+        return ResponseEntity.ok(adminService.getAllAccountants());
+    }
+
+    @GetMapping("/getaccountants/{accountantId}")
+    public ResponseEntity<?> getAccountantById(@PathVariable Long accountantId) {
+        return ResponseEntity.ok(adminService.getAccountantByAccountantId(accountantId));
+    }
+    
+    // ---------- AFFILIATE ----------
+    @GetMapping("/getaffiliates")
+    public ResponseEntity<?> getAllAffiliates() {
+        return ResponseEntity.ok(adminService.getAllAffiliates());
+    }
+
+    @GetMapping("/getaffiliates/{affiliateId}")
+    public ResponseEntity<?> getAffiliateById(@PathVariable Long affiliateId) {
+        return ResponseEntity.ok(adminService.getAffiliateByAffiliateId(affiliateId));
+    }
+    
+    // ---------- COMMUNITY-MANAGER ----------
+    @GetMapping("/getcommunitymanagers")
+    public ResponseEntity<?> getAllCommunityManagers() {
+        return ResponseEntity.ok(adminService.getAllCommunityManagers());
+    }
+
+    @GetMapping("/getcommunitymanagers/{communityManagerId}")
+    public ResponseEntity<?> getCommunityManagerById(@PathVariable Long communityManagerId) {
+        return ResponseEntity.ok(adminService.getCommunityManagerByCommunityManagerId(communityManagerId));
+    }
+    
+    // ---------- DEPARTMENT-HEAD ----------
+    @GetMapping("/getdepartmentheads")
+    public ResponseEntity<?> getAllDepartmentHeads() {
+        return ResponseEntity.ok(adminService.getAllDepartmentHeads());
+    }
+
+    @GetMapping("/getdepartmentheads/{departmentHeadId}")
+    public ResponseEntity<?> getDepartmentHeadsById(@PathVariable Long departmentHeadId) {
+        return ResponseEntity.ok(adminService.getDepartmentHeadByDepartmentHeadId(departmentHeadId));
+    }
+    
+    // ---------- EVALUATOR ----------
+    @GetMapping("/getevaluators")
+    public ResponseEntity<?> getAllEvaluators() {
+        return ResponseEntity.ok(adminService.getAllEvaluators());
+    }
+
+    @GetMapping("/getevaluators/{evaluatorId}")
+    public ResponseEntity<?> getEvaluatorById(@PathVariable Long evaluatorId) {
+        return ResponseEntity.ok(adminService.getEvaluatorByEvaluatorId(evaluatorId));
+    }
+    
+    // ---------- INVENTORY-MANAGER ----------
+    @GetMapping("/getinventorymanagers")
+    public ResponseEntity<?> getAllInventoryManagers() {
+        return ResponseEntity.ok(adminService.getAllInventoryManagers());
+    }
+
+    @GetMapping("/getinventorymanagers/{inventoryManagerId}")
+    public ResponseEntity<?> getInventoryManagerById(@PathVariable Long inventoryManagerId) {
+        return ResponseEntity.ok(adminService.getInventoryManagerByInventoryManagerId(inventoryManagerId));
+    }
+    
+    // ---------- LIBRARIAN ----------
+    @GetMapping("/getlibrarians")
+    public ResponseEntity<?> getAllLibrarians() {
+        return ResponseEntity.ok(adminService.getAllLibrarians());
+    }
+
+    @GetMapping("/getlibrarians/{librarianId}")
+    public ResponseEntity<?> getLibrarianById(@PathVariable Long librarianId) {
+        return ResponseEntity.ok(adminService.getLibrarianByLibrarianId(librarianId));
+    }
+    
+    // ---------- MARKETING-MANAGER ----------
+    @GetMapping("/getmarketingmanagers")
+    public ResponseEntity<?> getAllMarketingManagers() {
+        return ResponseEntity.ok(adminService.getAllMarketingManagers());
+    }
+
+    @GetMapping("/getmarketingmanagers/{marketingManagerId}")
+    public ResponseEntity<?> getMarketingManagerById(@PathVariable Long marketingManagerId) {
+        return ResponseEntity.ok(adminService.getMarketingManagerByMarketingManagerId(marketingManagerId));
+    }
+    
+    // ---------- MENTOR ----------
+    @GetMapping("/getmentors")
+    public ResponseEntity<?> getAllMentors() {
+        return ResponseEntity.ok(adminService.getAllMentors());
+    }
+
+    @GetMapping("/getmentors/{mentorId}")
+    public ResponseEntity<?> getMentorById(@PathVariable Long mentorId) {
+        return ResponseEntity.ok(adminService.getMentorByMentorId(mentorId));
+    }
+    
+    // ---------- TRANSPORT-MANAGER ----------
+    @GetMapping("/gettransportmanagers")
+    public ResponseEntity<?> getAllTransportManagers() {
+        return ResponseEntity.ok(adminService.getAllTransportManagers());
+    }
+
+    @GetMapping("/gettransportmanagers/{transportManagerId}")
+    public ResponseEntity<?> getTransportManagerById(@PathVariable Long transportManagerId) {
+        return ResponseEntity.ok(adminService.getTransportManagerByTransportManagerId(transportManagerId));
+    }
+    
+    // ---------- WARDEN ----------
+    @GetMapping("/getwardens")
+    public ResponseEntity<?> getAllWardens() {
+        return ResponseEntity.ok(adminService.getAllWardens());
+    }
+
+    @GetMapping("/getwardens/{wardenId}")
+    public ResponseEntity<?> getWardenById(@PathVariable Long wardenId) {
+        return ResponseEntity.ok(adminService.getWardenByWardenId(wardenId));
     }
 
     // ---------- MAP ----------

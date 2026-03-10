@@ -2,6 +2,7 @@ package com.lms.www.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -10,6 +11,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.logout.LogoutFilter;
 
 @Configuration
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
@@ -76,6 +78,40 @@ public class SecurityConfig {
             	    
             	     // 🔐 PARENT
             	    .requestMatchers("/conductor/**").hasAuthority("ROLE_CONDUCTOR")
+            	    
+            	    // 🔐 ACCOUNTANT
+            	    .requestMatchers("/accountant/**").hasAuthority("ROLE_ACCOUNTANT")
+            	    
+            	    // 🔐 AFFILIATE
+            	    .requestMatchers("/affiliate/**").hasAuthority("ROLE_AFFILIATE")
+            	    
+            	    // 🔐 COMMUNITY MANAGER
+            	    .requestMatchers("/community-manager/**").hasAuthority("ROLE_COMMUNITY_MANAGER")
+            	    
+            	    // 🔐 DEPARTMENT HEAD
+            	    .requestMatchers("/department-head/**").hasAuthority("ROLE_DEPARTMENT_HEAD")
+            	    
+            	    // 🔐 EVALUATOR
+            	    .requestMatchers("/evaluator/**").hasAuthority("ROLE_EVALUATOR")
+            	    
+            	    // 🔐 INVENTORY MANAGER
+            	    .requestMatchers("/inventory-manager/**").hasAuthority("ROLE_INVENTORY_MANAGER")
+            	    
+            	    // 🔐 LIBRARIAN
+            	    .requestMatchers("/librarian/**").hasAuthority("ROLE_LIBRARIAN")
+            	    
+            	    // 🔐 MARKETING MANAGER
+            	    .requestMatchers("/marketing-manager/**").hasAuthority("ROLE_MARKETING_MANAGER")
+            	    
+            	    // 🔐 MENTOR
+            	    .requestMatchers("/mentor/**").hasAuthority("ROLE_MENTOR")
+            	    
+            	    // 🔐 TRANSPORT MANAGER
+            	    .requestMatchers("/transport-manager/**").hasAuthority("ROLE_TRANSPORT_MANAGER")
+            	    
+            	    // 🔐 WARDEN
+            	    .requestMatchers("/warden/**").hasAuthority("ROLE_WARDEN")
+            	    
 
             	    // 🔐 SELF
             	    .requestMatchers("/me/**").authenticated()

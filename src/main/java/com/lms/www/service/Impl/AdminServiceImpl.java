@@ -12,35 +12,68 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.lms.www.config.JwtUtil;
 import com.lms.www.config.UserAuthorizationUtil;
+import com.lms.www.controller.request.AccountantRequest;
+import com.lms.www.controller.request.AffiliateRequest;
+import com.lms.www.controller.request.CommunityManagerRequest;
 import com.lms.www.controller.request.ConductorRequest;
+import com.lms.www.controller.request.DepartmentHeadRequest;
 import com.lms.www.controller.request.DriverRequest;
+import com.lms.www.controller.request.EvaluatorRequest;
 import com.lms.www.controller.request.InstructorRequest;
+import com.lms.www.controller.request.InventoryManagerRequest;
+import com.lms.www.controller.request.LibrarianRequest;
+import com.lms.www.controller.request.MarketingManagerRequest;
+import com.lms.www.controller.request.MentorRequest;
 import com.lms.www.controller.request.ParentRequest;
 import com.lms.www.controller.request.StudentRequest;
+import com.lms.www.controller.request.TransportManagerRequest;
+import com.lms.www.controller.request.WardenRequest;
+import com.lms.www.model.Accountant;
+import com.lms.www.model.Affiliate;
 import com.lms.www.model.AuditLog;
+import com.lms.www.model.CommunityManager;
 import com.lms.www.model.Conductor;
+import com.lms.www.model.DepartmentHead;
 import com.lms.www.model.Driver;
+import com.lms.www.model.Evaluator;
 import com.lms.www.model.Instructor;
+import com.lms.www.model.InventoryManager;
+import com.lms.www.model.Librarian;
+import com.lms.www.model.MarketingManager;
+import com.lms.www.model.Mentor;
 import com.lms.www.model.Parent;
 import com.lms.www.model.ParentStudentRelation;
 import com.lms.www.model.Student;
 import com.lms.www.model.SystemSettings;
+import com.lms.www.model.TransportManager;
 import com.lms.www.model.User;
 import com.lms.www.model.UserPermission;
+import com.lms.www.model.Warden;
+import com.lms.www.repository.AccountantRepository;
 import com.lms.www.repository.AddressRepository;
+import com.lms.www.repository.AffiliateRepository;
 import com.lms.www.repository.AuditLogRepository;
+import com.lms.www.repository.CommunityManagerRepository;
 import com.lms.www.repository.ConductorRepository;
+import com.lms.www.repository.DepartmentHeadRepository;
 import com.lms.www.repository.DriverRepository;
+import com.lms.www.repository.EvaluatorRepository;
 import com.lms.www.repository.InstructorRepository;
+import com.lms.www.repository.InventoryManagerRepository;
+import com.lms.www.repository.LibrarianRepository;
 import com.lms.www.repository.LoginHistoryRepository;
+import com.lms.www.repository.MarketingManagerRepository;
+import com.lms.www.repository.MentorRepository;
 import com.lms.www.repository.ParentRepository;
 import com.lms.www.repository.ParentStudentRelationRepository;
 import com.lms.www.repository.PasswordResetTokenRepository;
 import com.lms.www.repository.StudentRepository;
 import com.lms.www.repository.SystemSettingsRepository;
+import com.lms.www.repository.TransportManagerRepository;
 import com.lms.www.repository.UserPermissionRepository;
 import com.lms.www.repository.UserRepository;
 import com.lms.www.repository.UserSessionRepository;
+import com.lms.www.repository.WardenRepository;
 import com.lms.www.service.AdminService;
 import com.lms.www.service.EmailService;
 import com.lms.www.service.FailedLoginAttemptService;
@@ -72,6 +105,17 @@ public class AdminServiceImpl implements AdminService {
     private final TenantResolver tenantResolver;
     private final FailedLoginAttemptService failedLoginAttemptService;
     private final UserPermissionRepository userPermissionRepository; 
+    private final AccountantRepository accountantRepository;
+    private final AffiliateRepository affiliateRepository;
+    private final CommunityManagerRepository communityManagerRepository;
+    private final DepartmentHeadRepository departmentHeadRepository;
+    private final EvaluatorRepository evaluatorRepository;
+    private final InventoryManagerRepository inventoryManagerRepository;
+    private final LibrarianRepository librarianRepository;
+    private final MarketingManagerRepository marketingManagerRepository;
+    private final MentorRepository mentorRepository;
+    private final TransportManagerRepository transportManagerRepository;
+    private final WardenRepository wardenRepository;
 
     public AdminServiceImpl(
             UserRepository userRepository,
@@ -93,7 +137,18 @@ public class AdminServiceImpl implements AdminService {
             JwtUtil jwtUtil,
             TenantResolver tenantResolver,
             FailedLoginAttemptService failedLoginAttemptService,
-            UserPermissionRepository userPermissionRepository
+            UserPermissionRepository userPermissionRepository,
+            AccountantRepository accountantRepository,
+            AffiliateRepository affiliateRepository,
+            CommunityManagerRepository communityManagerRepository,
+            DepartmentHeadRepository departmentHeadRepository,
+            EvaluatorRepository evaluatorRepository,
+            InventoryManagerRepository inventoryManagerRepository,
+            LibrarianRepository librarianRepository,
+            MarketingManagerRepository marketingManagerRepository,
+            MentorRepository mentorRepository,
+            TransportManagerRepository transportManagerRepository,
+            WardenRepository wardenRepository
     ) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -115,6 +170,17 @@ public class AdminServiceImpl implements AdminService {
         this.tenantResolver = tenantResolver;
         this.failedLoginAttemptService = failedLoginAttemptService;
         this.userPermissionRepository = userPermissionRepository;
+        this.accountantRepository = accountantRepository;
+        this.affiliateRepository = affiliateRepository;
+        this.communityManagerRepository = communityManagerRepository;
+        this.departmentHeadRepository = departmentHeadRepository;
+        this.evaluatorRepository = evaluatorRepository;
+        this.inventoryManagerRepository = inventoryManagerRepository;
+        this.librarianRepository = librarianRepository;
+        this.marketingManagerRepository = marketingManagerRepository;
+        this.mentorRepository = mentorRepository;
+        this.transportManagerRepository = transportManagerRepository;
+        this.wardenRepository = wardenRepository;
     }
 
     // ===================== COMMON =====================
@@ -358,6 +424,336 @@ public class AdminServiceImpl implements AdminService {
             throw ex;
         }
     }
+    
+    @Override
+    public void createAccountant(AccountantRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            Accountant accountant = new Accountant();
+            accountant.setUser(user);
+            accountantRepository.save(accountant);
+            
+            saveUserPermissions(user, request.getPermissions());
+            
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "ACCOUNTANT", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createAffiliate(AffiliateRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            Affiliate affiliate = new Affiliate();
+            affiliate.setUser(user);
+            affiliateRepository.save(affiliate);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "AFFILIATE", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createCommunityManager(CommunityManagerRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            CommunityManager communityManager = new CommunityManager();
+            communityManager.setUser(user);
+            communityManagerRepository.save(communityManager);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "COMMUNITY MANAGER", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createDepartmentHead(DepartmentHeadRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            DepartmentHead departmentHead = new DepartmentHead();
+            departmentHead.setUser(user);
+            departmentHeadRepository.save(departmentHead);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "DEPARTMENT HEAD", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createEvaluator(EvaluatorRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            Evaluator evaluator = new Evaluator();
+            evaluator.setUser(user);
+            evaluatorRepository.save(evaluator);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "EVALUATOR", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createInventoryManager(InventoryManagerRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            InventoryManager inventoryManager = new InventoryManager();
+            inventoryManager.setUser(user);
+            inventoryManagerRepository.save(inventoryManager);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "INVENTORY MANAGER", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createLibrarian(LibrarianRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            Librarian librarian = new Librarian();
+            librarian.setUser(user);
+            librarianRepository.save(librarian);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "LIBRARIAN", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createMarketingManager(MarketingManagerRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            MarketingManager marketingManager = new MarketingManager();
+            marketingManager.setUser(user);
+            marketingManagerRepository.save(marketingManager);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "MARKETING MANAGER", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createMentor(MentorRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            Mentor mentor = new Mentor();
+            mentor.setUser(user);
+            mentorRepository.save(mentor);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "MENTOR", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createTransportManager(TransportManagerRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            TransportManager transportManager = new TransportManager();
+            transportManager.setUser(user);
+            transportManagerRepository.save(transportManager);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "TRANSPORT MANAGER", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
+    
+    @Override
+    public void createWarden(WardenRequest request, User admin, HttpServletRequest httpRequest) {
+        try {
+            User user = createBaseUser(
+                    request.getFirstName(),
+                    request.getLastName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    request.getPhone(),
+                    request.getRoleName(),
+                    admin,
+                    httpRequest
+            );
+
+            Warden warden = new Warden();
+            warden.setUser(user);
+            wardenRepository.save(warden);
+            
+            saveUserPermissions(user, request.getPermissions());
+
+            proxy().markAuditStatus(admin.getUserId(), true);
+            audit("CREATE", "WARDEN", user.getUserId(), admin, httpRequest);
+            emailService.sendRegistrationMail(user, user.getRoleName());
+
+        } catch (RuntimeException ex) {
+            proxy().markAuditStatus(admin.getUserId(), false);
+            throw ex;
+        }
+    }
 
     // ===================== READ =====================
     @Override public List<User> getAllUsers() { return userRepository.findAll(); }
@@ -374,6 +770,17 @@ public class AdminServiceImpl implements AdminService {
     @Override public List<Instructor> getAllInstructors() { return instructorRepository.findAll(); }
     @Override public List<Driver> getAllDrivers() { return driverRepository.findAll(); }
     @Override public List<Conductor> getAllConductors() { return conductorRepository.findAll(); }
+    @Override public List<Accountant> getAllAccountants() { return accountantRepository.findAll(); }
+    @Override public List<Affiliate> getAllAffiliates() { return affiliateRepository.findAll(); }
+    @Override public List<CommunityManager> getAllCommunityManagers() { return communityManagerRepository.findAll(); }
+    @Override public List<DepartmentHead> getAllDepartmentHeads() { return departmentHeadRepository.findAll(); }
+    @Override public List<Evaluator> getAllEvaluators() { return evaluatorRepository.findAll(); }
+    @Override public List<InventoryManager> getAllInventoryManagers() { return inventoryManagerRepository.findAll(); }
+    @Override public List<Librarian> getAllLibrarians() { return librarianRepository.findAll(); }
+    @Override public List<MarketingManager> getAllMarketingManagers() { return marketingManagerRepository.findAll(); }
+    @Override public List<Mentor> getAllMentors() { return mentorRepository.findAll(); }
+    @Override public List<TransportManager> getAllTransportManagers() { return transportManagerRepository.findAll(); }
+    @Override public List<Warden> getAllWardens() { return wardenRepository.findAll(); }
     
     @Override
     public Student getStudentByStudentId(Long studentId) {
@@ -410,6 +817,72 @@ public class AdminServiceImpl implements AdminService {
         return conductorRepository.findById(conductorId)
                 .orElseThrow(() -> new RuntimeException("Conductor not found"));
     }  
+    
+    @Override
+    public Accountant getAccountantByAccountantId(Long accountantId) {
+        return accountantRepository.findById(accountantId)
+                .orElseThrow(() -> new RuntimeException("Accountant not found"));
+    } 
+    
+    @Override
+    public Affiliate getAffiliateByAffiliateId(Long affiliateId) {
+        return affiliateRepository.findById(affiliateId)
+                .orElseThrow(() -> new RuntimeException("Affiliate not found"));
+    } 
+    
+    @Override
+    public CommunityManager getCommunityManagerByCommunityManagerId(Long communityManagerId) {
+        return communityManagerRepository.findById(communityManagerId)
+                .orElseThrow(() -> new RuntimeException("Community Manager not found"));
+    } 
+    
+    @Override
+    public DepartmentHead getDepartmentHeadByDepartmentHeadId(Long departmentHeadId) {
+        return departmentHeadRepository.findById(departmentHeadId)
+                .orElseThrow(() -> new RuntimeException("Department Head not found"));
+    } 
+    
+    @Override
+    public Evaluator getEvaluatorByEvaluatorId(Long evaluatorId) {
+        return evaluatorRepository.findById(evaluatorId)
+                .orElseThrow(() -> new RuntimeException("Evaluator not found"));
+    } 
+    
+    @Override
+    public InventoryManager getInventoryManagerByInventoryManagerId(Long inventoryManagerId) {
+        return inventoryManagerRepository.findById(inventoryManagerId)
+                .orElseThrow(() -> new RuntimeException("Inventory Manager not found"));
+    } 
+    
+    @Override
+    public Librarian getLibrarianByLibrarianId(Long librarianId) {
+        return librarianRepository.findById(librarianId)
+                .orElseThrow(() -> new RuntimeException("Librarian not found"));
+    } 
+    
+    @Override
+    public MarketingManager getMarketingManagerByMarketingManagerId(Long marketingManagerId) {
+        return marketingManagerRepository.findById(marketingManagerId)
+                .orElseThrow(() -> new RuntimeException("Marketing Manager not found"));
+    } 
+    
+    @Override
+    public Mentor getMentorByMentorId(Long mentorId) {
+        return mentorRepository.findById(mentorId)
+                .orElseThrow(() -> new RuntimeException("Mentor not found"));
+    } 
+    
+    @Override
+    public TransportManager getTransportManagerByTransportManagerId(Long transportManagerId) {
+        return transportManagerRepository.findById(transportManagerId)
+                .orElseThrow(() -> new RuntimeException("Transport Manager not found"));
+    } 
+    
+    @Override
+    public Warden getWardenByWardenId(Long wardenId) {
+        return wardenRepository.findById(wardenId)
+                .orElseThrow(() -> new RuntimeException("Warden not found"));
+    }
 
     // ===================== UPDATE / DELETE =====================
     @Override
