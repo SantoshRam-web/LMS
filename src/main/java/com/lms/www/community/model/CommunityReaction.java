@@ -5,20 +5,24 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="community_spaces")
+@Table(name="community_reactions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CommunitySpace {
+public class CommunityReaction {
 
 @Id
 @GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long spaceId;
+private Long reactionId;
 
-private String spaceName;
+private Long threadId;
 
-private String courseId;
+private Long replyId;
+
+private Long userId;
+
+private String reactionType;
 
 private LocalDateTime createdAt;
 

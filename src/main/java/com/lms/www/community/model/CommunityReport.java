@@ -5,20 +5,26 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="community_spaces")
+@Table(name="community_reports")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CommunitySpace {
+public class CommunityReport {
 
 @Id
 @GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long spaceId;
+private Long reportId;
 
-private String spaceName;
+private Long threadId;
 
-private String courseId;
+private Long replyId;
+
+private Long reportedBy;
+
+private String reason;
+
+private String status;
 
 private LocalDateTime createdAt;
 

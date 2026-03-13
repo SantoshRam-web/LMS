@@ -5,27 +5,23 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name="community_channels")
+@Table(name="community_mentions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class CommunityChannel {
+public class CommunityMention {
 
 @Id
 @GeneratedValue(strategy = GenerationType.IDENTITY)
-private Long channelId;
+private Long mentionId;
 
-private Long spaceId;
+private Long threadId;
 
-private String channelName;
+private Long replyId;
 
-private String channelType;
+private Long mentionedUserId;
 
 private LocalDateTime createdAt;
-
-private Boolean adminsOnly = false;
-
-private String description;
 
 }
