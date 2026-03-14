@@ -551,4 +551,92 @@ CREATE TABLE tenant_custom_page_sections (
         ON DELETE CASCADE
 );
 
+CREATE TABLE community_spaces (
+space_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+space_name VARCHAR(255) NOT NULL,
+course_id BIGINT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+updated_at TIMESTAMP NULL
+);
+
+CREATE TABLE community_channels (
+channel_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+space_id BIGINT NOT NULL,
+channel_name VARCHAR(255) NOT NULL,
+channel_type VARCHAR(50),
+description TEXT,
+admins_only BOOLEAN DEFAULT FALSE,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE community_threads (
+thread_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+channel_id BIGINT NOT NULL,
+title VARCHAR(255),
+content TEXT,
+author_id BIGINT,
+author_name VARCHAR(255),
+author_role VARCHAR(50),
+status VARCHAR(20) DEFAULT 'OPEN',
+is_pinned BOOLEAN DEFAULT FALSE,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE community_replies (
+reply_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+thread_id BIGINT,
+parent_reply_id BIGINT,
+content TEXT,
+author_id BIGINT,
+author_name VARCHAR(255),
+author_role VARCHAR(50),
+is_verified BOOLEAN DEFAULT FALSE,
+is_answer BOOLEAN DEFAULT FALSE,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE community_reactions (
+reaction_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+thread_id BIGINT,
+reply_id BIGINT,
+user_id BIGINT,
+reaction_type VARCHAR(50),
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE community_bookmarks (
+bookmark_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+thread_id BIGINT,
+user_id BIGINT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE community_mentions (
+mention_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+thread_id BIGINT,
+reply_id BIGINT,
+mentioned_user_id BIGINT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE community_notifications (
+notification_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+user_id BIGINT,
+thread_id BIGINT,
+reply_id BIGINT,
+type VARCHAR(50),
+is_read BOOLEAN DEFAULT FALSE,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE community_reports (
+report_id BIGINT AUTO_INCREMENT PRIMARY KEY,
+thread_id BIGINT,
+reply_id BIGINT,
+reported_by BIGINT,
+reason TEXT,
+status VARCHAR(20) DEFAULT 'OPEN',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 SET FOREIGN_KEY_CHECKS = 1;

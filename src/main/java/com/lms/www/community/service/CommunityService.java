@@ -6,9 +6,21 @@ import java.util.List;
 
 public interface CommunityService {
 
+//////////////////////////////////////////////////////
+// COMMUNITY SPACES
+//////////////////////////////////////////////////////
+
+CommunitySpace createSpace(CommunitySpace space);
+
 List<CommunitySpace> getSpaces();
 
-CommunitySpace updateCommunityTitle(String title);
+CommunitySpace updateCommunityTitle(Long spaceId,String title);
+
+List<CommunitySpace> searchSpaces(String search);
+
+//////////////////////////////////////////////////////
+// CHANNELS
+//////////////////////////////////////////////////////
 
 List<CommunityChannel> getChannels(Long spaceId);
 
@@ -16,14 +28,51 @@ CommunityChannel createChannel(Long spaceId,String name,String description,Boole
 
 CommunityChannel updateChannel(Long channelId,String name,String description,Boolean adminsOnly);
 
+//////////////////////////////////////////////////////
+// THREADS
+//////////////////////////////////////////////////////
+
 CommunityThread createThread(CommunityThread thread);
 
 List<CommunityThread> getThreads(Long channelId);
 
+CommunityThread getThread(Long threadId);
+
+//////////////////////////////////////////////////////
+// REPLIES
+//////////////////////////////////////////////////////
+
 CommunityReply reply(Long threadId,CommunityReply reply);
+
+//////////////////////////////////////////////////////
+// REACTIONS
+//////////////////////////////////////////////////////
 
 void react(Long threadId,Long replyId,String reactionType,Long userId);
 
+//////////////////////////////////////////////////////
+// BOOKMARKS
+//////////////////////////////////////////////////////
+
 void bookmark(Long threadId,Long userId);
+
+void mentionUser(Long threadId, Long replyId, Long mentionedUserId);
+
+List<CommunityMention> getMentions(Long userId);
+
+List<CommunityBookmark> getBookmarks(Long userId);
+
+//////////////////////////////////////////////////////
+// REPORTS
+//////////////////////////////////////////////////////
+
+CommunityReport report(CommunityReport report);
+
+//////////////////////////////////////////////////////
+// NOTIFICATIONS
+//////////////////////////////////////////////////////
+
+List<CommunityNotification> getNotifications(Long userId);
+
 
 }

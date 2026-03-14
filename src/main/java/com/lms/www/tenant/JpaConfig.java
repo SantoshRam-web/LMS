@@ -22,7 +22,8 @@ public class JpaConfig {
 
         emf.setDataSource(tenantRoutingDataSource);
         emf.setPackagesToScan("com.lms.www.model",
-        		"com.lms.www.website.model");
+        		"com.lms.www.website.model",
+        		"com.lms.www.community.model");
         emf.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
 
         return emf;

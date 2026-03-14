@@ -14,12 +14,16 @@ public class CommunitySpace {
 
 @Id
 @GeneratedValue(strategy = GenerationType.IDENTITY)
+@Column(name = "space_id")
 private Long spaceId;
 
+@Column(name = "space_name")
 private String spaceName;
 
+@Column(name = "course_id")
 private String courseId;
 
+@Column(name = "created_at")
 private LocalDateTime createdAt;
 
 }
