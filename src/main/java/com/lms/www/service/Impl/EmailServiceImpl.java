@@ -141,6 +141,7 @@ public class EmailServiceImpl implements EmailService {
     private void send(String to, String subject, String body) {
         try {
             SimpleMailMessage msg = new SimpleMailMessage();
+            msg.setFrom("lmssender4@gmail.com");
             msg.setTo(to);
             msg.setSubject(subject);
             msg.setText(body);
@@ -193,7 +194,7 @@ public class EmailServiceImpl implements EmailService {
 
         msg.setText(
             "Welcome!\n\n" +
-            "you are now super admin and this is your domain address:"+
+            "you are now super admin and this is your domain address:"+"\n"+
             "Web Address: " + superAdminUrl + "\n" +
             "Username: " + email + "\n" +
             "Password: " + password + "\n\n" +
