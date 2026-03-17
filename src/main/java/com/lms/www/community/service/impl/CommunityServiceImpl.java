@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.lms.www.community.model.CommunityBookmark;
 import com.lms.www.community.model.CommunityChannel;
+import com.lms.www.community.model.CommunityChannelMember;
 import com.lms.www.community.model.CommunityMention;
 import com.lms.www.community.model.CommunityNotification;
 import com.lms.www.community.model.CommunityReaction;
@@ -15,6 +16,7 @@ import com.lms.www.community.model.CommunityReport;
 import com.lms.www.community.model.CommunitySpace;
 import com.lms.www.community.model.CommunityThread;
 import com.lms.www.community.repository.CommunityBookmarkRepository;
+import com.lms.www.community.repository.CommunityChannelMemberRepository;
 import com.lms.www.community.repository.CommunityChannelRepository;
 import com.lms.www.community.repository.CommunityMentionRepository;
 import com.lms.www.community.repository.CommunityNotificationRepository;
@@ -37,6 +39,7 @@ private final CommunityBookmarkRepository bookmarkRepo;
 private final CommunityReportRepository reportRepo;
 private final CommunityNotificationRepository notificationRepo;
 private final CommunityMentionRepository mentionRepo;
+private final CommunityChannelMemberRepository memberRepo;
 
 public CommunityServiceImpl(
 CommunitySpaceRepository spaceRepo,
@@ -47,7 +50,8 @@ CommunityReactionRepository reactionRepo,
 CommunityBookmarkRepository bookmarkRepo,
 CommunityReportRepository reportRepo,
 CommunityNotificationRepository notificationRepo,
-CommunityMentionRepository mentionRepo
+CommunityMentionRepository mentionRepo,
+CommunityChannelMemberRepository memberRepo
 ){
 this.spaceRepo = spaceRepo;
 this.channelRepo = channelRepo;
@@ -58,6 +62,7 @@ this.bookmarkRepo = bookmarkRepo;
 this.reportRepo = reportRepo;
 this.notificationRepo = notificationRepo;
 this.mentionRepo = mentionRepo;
+this.memberRepo = memberRepo;
 }
 
 //////////////////////////////////////////////////////
@@ -251,5 +256,67 @@ public void mentionUser(Long threadId, Long replyId, Long mentionedUserId){
 @Override
 public List<CommunityMention> getMentions(Long userId){
 	return mentionRepo.findByMentionedUserId(userId);
+}
+
+@Override
+public void autoJoinMarketingChannel(Long userId){
+
+    // 1️⃣ Find marketing space
+    CommunitySpace marketingSpace =
+            spaceRepo.findBySpaceNameContainingIgnoreCase("Marketing")
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+
+    if(marketingSpace == null){
+
+        marketingSpace = CommunitySpace.builder()
+                .spaceName("Marketing Community")
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        marketingSpace = spaceRepo.save(marketingSpace);
+    }
+
+    // 2️⃣ Find marketing channel
+    CommunityChannel marketingChannel =
+            channelRepo.findBySpaceId(marketingSpace.getSpaceId())
+                    .stream()
+                    .filter(c -> c.getChannelName()
+                    .equalsIgnoreCase("marketing-updates"))
+                    .findFirst()
+                    .orElse(null);
+
+    if(marketingChannel == null){
+
+        marketingChannel = CommunityChannel.builder()
+                .spaceId(marketingSpace.getSpaceId())
+                .channelName("marketing-updates")
+                .channelType("DISCUSSION")
+                .description("Course discounts and announcements")
+                .adminsOnly(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        marketingChannel = channelRepo.save(marketingChannel);
+    }
+
+    // 3️⃣ Add user to channel if not already member
+    boolean exists = memberRepo.existsByChannelIdAndUserId(
+            marketingChannel.getChannelId(),
+            userId
+    );
+
+    if(!exists){
+
+        CommunityChannelMember member =
+                CommunityChannelMember.builder()
+                        .channelId(marketingChannel.getChannelId())
+                        .userId(userId)
+                        .joinedAt(LocalDateTime.now())
+                        .build();
+
+        memberRepo.save(member);
+    }
 }
 }

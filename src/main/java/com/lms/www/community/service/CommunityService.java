@@ -74,5 +74,6 @@ CommunityReport report(CommunityReport report);
 
 List<CommunityNotification> getNotifications(Long userId);
 
+void autoJoinMarketingChannel(Long userId);
 
 }
