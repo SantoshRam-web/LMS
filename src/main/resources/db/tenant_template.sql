@@ -639,4 +639,15 @@ status VARCHAR(20) DEFAULT 'OPEN',
 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE community_channel_members (
+    member_id BIGINT NOT NULL AUTO_INCREMENT,
+    channel_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    joined_at DATETIME DEFAULT NULL,
+    PRIMARY KEY (member_id),
+    UNIQUE KEY unique_member (channel_id, user_id),
+    KEY idx_channel_id (channel_id),
+    KEY idx_user_id (user_id)
+);
+
 SET FOREIGN_KEY_CHECKS = 1;

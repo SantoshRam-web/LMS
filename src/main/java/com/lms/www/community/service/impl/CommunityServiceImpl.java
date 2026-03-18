@@ -259,56 +259,94 @@ public List<CommunityMention> getMentions(Long userId){
 }
 
 @Override
+public void autoJoinGlobalCommunity(Long userId){
+
+    // 1️⃣ STRICT SPACE FETCH
+    CommunitySpace globalSpace = spaceRepo
+            .findBySpaceName("Global Community")
+            .orElseGet(() -> {
+                CommunitySpace newSpace = CommunitySpace.builder()
+                        .spaceName("Global Community")
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                return spaceRepo.save(newSpace);
+            });
+
+    // 2️⃣ STRICT CHANNEL FETCH
+    CommunityChannel globalChannel = channelRepo
+            .findBySpaceIdAndChannelName(
+                    globalSpace.getSpaceId(),
+                    "general"
+            )
+            .orElseGet(() -> {
+                CommunityChannel newChannel = CommunityChannel.builder()
+                        .spaceId(globalSpace.getSpaceId())
+                        .channelName("general")
+                        .channelType("DISCUSSION")
+                        .description("Global community discussions")
+                        .adminsOnly(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                return channelRepo.save(newChannel);
+            });
+
+    // 3️⃣ STRICT MEMBERSHIP CHECK
+    boolean exists = memberRepo.existsByChannelIdAndUserId(
+            globalChannel.getChannelId(),
+            userId
+    );
+
+    if(!exists){
+        CommunityChannelMember member =
+                CommunityChannelMember.builder()
+                        .channelId(globalChannel.getChannelId())
+                        .userId(userId)
+                        .joinedAt(LocalDateTime.now())
+                        .build();
+
+        memberRepo.save(member);
+    }
+}
+
+@Override
 public void autoJoinMarketingChannel(Long userId){
 
-    // 1️⃣ Find marketing space
-    CommunitySpace marketingSpace =
-            spaceRepo.findBySpaceNameContainingIgnoreCase("Marketing")
-                    .stream()
-                    .findFirst()
-                    .orElse(null);
+    // 1️⃣ STRICT SPACE FETCH
+    CommunitySpace marketingSpace = spaceRepo
+            .findBySpaceName("Marketing Community")
+            .orElseGet(() -> {
+                CommunitySpace newSpace = CommunitySpace.builder()
+                        .spaceName("Marketing Community")
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                return spaceRepo.save(newSpace);
+            });
 
-    if(marketingSpace == null){
+    // 2️⃣ STRICT CHANNEL FETCH
+    CommunityChannel marketingChannel = channelRepo
+            .findBySpaceIdAndChannelName(
+                    marketingSpace.getSpaceId(),
+                    "marketing-updates"
+            )
+            .orElseGet(() -> {
+                CommunityChannel newChannel = CommunityChannel.builder()
+                        .spaceId(marketingSpace.getSpaceId())
+                        .channelName("marketing-updates")
+                        .channelType("DISCUSSION")
+                        .description("Course discounts and announcements")
+                        .adminsOnly(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                return channelRepo.save(newChannel);
+            });
 
-        marketingSpace = CommunitySpace.builder()
-                .spaceName("Marketing Community")
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        marketingSpace = spaceRepo.save(marketingSpace);
-    }
-
-    // 2️⃣ Find marketing channel
-    CommunityChannel marketingChannel =
-            channelRepo.findBySpaceId(marketingSpace.getSpaceId())
-                    .stream()
-                    .filter(c -> c.getChannelName()
-                    .equalsIgnoreCase("marketing-updates"))
-                    .findFirst()
-                    .orElse(null);
-
-    if(marketingChannel == null){
-
-        marketingChannel = CommunityChannel.builder()
-                .spaceId(marketingSpace.getSpaceId())
-                .channelName("marketing-updates")
-                .channelType("DISCUSSION")
-                .description("Course discounts and announcements")
-                .adminsOnly(false)
-                .createdAt(LocalDateTime.now())
-                .build();
-
-        marketingChannel = channelRepo.save(marketingChannel);
-    }
-
-    // 3️⃣ Add user to channel if not already member
+    // 3️⃣ MEMBERSHIP CHECK
     boolean exists = memberRepo.existsByChannelIdAndUserId(
             marketingChannel.getChannelId(),
             userId
     );
 
     if(!exists){
-
         CommunityChannelMember member =
                 CommunityChannelMember.builder()
                         .channelId(marketingChannel.getChannelId())
@@ -317,6 +355,128 @@ public void autoJoinMarketingChannel(Long userId){
                         .build();
 
         memberRepo.save(member);
+    }
+}
+
+@Override
+public void createCourseCommunity(Long courseId, String courseName){
+
+    // 1️⃣ Check if already exists (NO DUPLICATE)
+    CommunitySpace space = spaceRepo.findByCourseId(courseId)
+            .orElseGet(() -> {
+
+                CommunitySpace newSpace = CommunitySpace.builder()
+                        .spaceName(courseName + " Community")
+                        .courseId(courseId)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+
+                return spaceRepo.save(newSpace);
+            });
+
+    // 2️⃣ Create default channel
+    channelRepo.findBySpaceIdAndChannelName(space.getSpaceId(), "general")
+            .orElseGet(() -> {
+
+                CommunityChannel channel = CommunityChannel.builder()
+                        .spaceId(space.getSpaceId())
+                        .channelName("general")
+                        .channelType("DISCUSSION")
+                        .description("Course discussions")
+                        .adminsOnly(false)
+                        .createdAt(LocalDateTime.now())
+                        .build();
+
+                return channelRepo.save(channel);
+            });
+}
+
+@Override
+public void addUserToCourseCommunity(Long courseId, Long userId, String roleName){
+
+    // ❌ Only allow student & instructor
+    if (!"ROLE_STUDENT".equals(roleName) && !"ROLE_INSTRUCTOR".equals(roleName)) {
+        return;
+    }
+
+    // 1️⃣ Get space
+    CommunitySpace space = spaceRepo.findByCourseId(courseId)
+            .orElseThrow(() -> new RuntimeException("Course community not found"));
+
+    // 2️⃣ Get channel
+    CommunityChannel channel = channelRepo
+            .findBySpaceIdAndChannelName(space.getSpaceId(), "general")
+            .orElseThrow(() -> new RuntimeException("Channel not found"));
+
+    // 3️⃣ Prevent duplicate membership
+    boolean exists = memberRepo.existsByChannelIdAndUserId(
+            channel.getChannelId(),
+            userId
+    );
+
+    if (!exists) {
+        memberRepo.save(
+                CommunityChannelMember.builder()
+                        .channelId(channel.getChannelId())
+                        .userId(userId)
+                        .joinedAt(LocalDateTime.now())
+                        .build()
+        );
+    }
+}
+
+@Override
+public void autoJoinRoleCommunity(Long userId, String roleName){
+
+    // ❌ Skip for LEAD (already handled separately)
+    if ("ROLE_LEAD".equals(roleName)) {
+        return;
+    }
+
+    // Convert role → clean name
+    String role = roleName.replace("ROLE_", ""); // STUDENT
+
+    String spaceName = role + " Community";       // STUDENT Community
+    String channelName = "general";
+
+    // 1️⃣ Find/Create Space
+    CommunitySpace space = spaceRepo
+            .findBySpaceName(spaceName)
+            .orElseGet(() -> spaceRepo.save(
+                    CommunitySpace.builder()
+                            .spaceName(spaceName)
+                            .createdAt(LocalDateTime.now())
+                            .build()
+            ));
+
+    // 2️⃣ Find/Create Channel
+    CommunityChannel channel = channelRepo
+            .findBySpaceIdAndChannelName(space.getSpaceId(), channelName)
+            .orElseGet(() -> channelRepo.save(
+                    CommunityChannel.builder()
+                            .spaceId(space.getSpaceId())
+                            .channelName(channelName)
+                            .channelType("DISCUSSION")
+                            .description(role + " discussions")
+                            .adminsOnly(false)
+                            .createdAt(LocalDateTime.now())
+                            .build()
+            ));
+
+    // 3️⃣ Add Member (safe)
+    boolean exists = memberRepo.existsByChannelIdAndUserId(
+            channel.getChannelId(),
+            userId
+    );
+
+    if (!exists) {
+        memberRepo.save(
+                CommunityChannelMember.builder()
+                        .channelId(channel.getChannelId())
+                        .userId(userId)
+                        .joinedAt(LocalDateTime.now())
+                        .build()
+        );
     }
 }
 }

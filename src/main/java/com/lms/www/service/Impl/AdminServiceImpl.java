@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.community.service.CommunityService;
 import com.lms.www.config.JwtUtil;
 import com.lms.www.config.UserAuthorizationUtil;
 import com.lms.www.controller.request.AccountantRequest;
@@ -116,6 +117,7 @@ public class AdminServiceImpl implements AdminService {
     private final MentorRepository mentorRepository;
     private final TransportManagerRepository transportManagerRepository;
     private final WardenRepository wardenRepository;
+    private final CommunityService communityService;
 
     public AdminServiceImpl(
             UserRepository userRepository,
@@ -148,7 +150,8 @@ public class AdminServiceImpl implements AdminService {
             MarketingManagerRepository marketingManagerRepository,
             MentorRepository mentorRepository,
             TransportManagerRepository transportManagerRepository,
-            WardenRepository wardenRepository
+            WardenRepository wardenRepository,
+            CommunityService communityService
     ) {
         this.userRepository = userRepository;
         this.studentRepository = studentRepository;
@@ -181,6 +184,7 @@ public class AdminServiceImpl implements AdminService {
         this.mentorRepository = mentorRepository;
         this.transportManagerRepository = transportManagerRepository;
         this.wardenRepository = wardenRepository;
+        this.communityService = communityService;
     }
 
     // ===================== COMMON =====================
@@ -209,6 +213,12 @@ public class AdminServiceImpl implements AdminService {
 
         if (password.length() < 10) {
             throw new RuntimeException("Password must be at least 10 characters");
+        }
+        
+        if (!"ROLE_LEAD".equals(roleName)) {
+            if (password == null || password.trim().isEmpty()) {
+                throw new RuntimeException("Password is required for role: " + roleName);
+            }
         }
 
         User user = new User();
@@ -295,6 +305,11 @@ public class AdminServiceImpl implements AdminService {
             
             saveUserPermissions(user, request.getPermissions());
             
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
+            
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "STUDENT", user.getUserId(), admin, httpRequest);
             emailService.sendRegistrationMail(user, user.getRoleName());
@@ -324,6 +339,11 @@ public class AdminServiceImpl implements AdminService {
             instructorRepository.save(instructor);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "INSTRUCTOR", user.getUserId(), admin, httpRequest);
@@ -354,6 +374,11 @@ public class AdminServiceImpl implements AdminService {
             parentRepository.save(parent);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "PARENT", user.getUserId(), admin, httpRequest);
@@ -384,6 +409,11 @@ public class AdminServiceImpl implements AdminService {
             driverRepository.save(driver);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "DRIVER", user.getUserId(), admin, httpRequest);
@@ -414,6 +444,11 @@ public class AdminServiceImpl implements AdminService {
             conductorRepository.save(conductor);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "CONDUCTOR", user.getUserId(), admin, httpRequest);
@@ -445,6 +480,11 @@ public class AdminServiceImpl implements AdminService {
             
             saveUserPermissions(user, request.getPermissions());
             
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
+            
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "ACCOUNTANT", user.getUserId(), admin, httpRequest);
             emailService.sendRegistrationMail(user, user.getRoleName());
@@ -474,6 +514,11 @@ public class AdminServiceImpl implements AdminService {
             affiliateRepository.save(affiliate);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "AFFILIATE", user.getUserId(), admin, httpRequest);
@@ -504,6 +549,11 @@ public class AdminServiceImpl implements AdminService {
             communityManagerRepository.save(communityManager);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "COMMUNITY MANAGER", user.getUserId(), admin, httpRequest);
@@ -534,6 +584,11 @@ public class AdminServiceImpl implements AdminService {
             departmentHeadRepository.save(departmentHead);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "DEPARTMENT HEAD", user.getUserId(), admin, httpRequest);
@@ -564,6 +619,11 @@ public class AdminServiceImpl implements AdminService {
             evaluatorRepository.save(evaluator);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "EVALUATOR", user.getUserId(), admin, httpRequest);
@@ -594,6 +654,11 @@ public class AdminServiceImpl implements AdminService {
             inventoryManagerRepository.save(inventoryManager);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "INVENTORY MANAGER", user.getUserId(), admin, httpRequest);
@@ -624,6 +689,11 @@ public class AdminServiceImpl implements AdminService {
             librarianRepository.save(librarian);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "LIBRARIAN", user.getUserId(), admin, httpRequest);
@@ -654,6 +724,11 @@ public class AdminServiceImpl implements AdminService {
             marketingManagerRepository.save(marketingManager);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "MARKETING MANAGER", user.getUserId(), admin, httpRequest);
@@ -684,6 +759,11 @@ public class AdminServiceImpl implements AdminService {
             mentorRepository.save(mentor);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "MENTOR", user.getUserId(), admin, httpRequest);
@@ -714,6 +794,11 @@ public class AdminServiceImpl implements AdminService {
             transportManagerRepository.save(transportManager);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "TRANSPORT MANAGER", user.getUserId(), admin, httpRequest);
@@ -744,6 +829,11 @@ public class AdminServiceImpl implements AdminService {
             wardenRepository.save(warden);
             
             saveUserPermissions(user, request.getPermissions());
+            
+            if (!"ROLE_LEAD".equals(user.getRoleName())) {
+                communityService.autoJoinGlobalCommunity(user.getUserId());
+                communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+            }
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "WARDEN", user.getUserId(), admin, httpRequest);

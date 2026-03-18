@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lms.www.community.service.CommunityService;
 import com.lms.www.model.SystemSettings;
 import com.lms.www.model.User;
 import com.lms.www.repository.SystemSettingsRepository;
@@ -18,15 +19,18 @@ public class TenantUserCreationService {
     private final UserRepository userRepository;
     private final SystemSettingsRepository systemSettingsRepository;
     private final PasswordEncoder passwordEncoder;
-
+    private final CommunityService communityService;
+    
     public TenantUserCreationService(
             UserRepository userRepository,
             SystemSettingsRepository systemSettingsRepository,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            CommunityService communityService
     ) {
         this.userRepository = userRepository;
         this.systemSettingsRepository = systemSettingsRepository;
         this.passwordEncoder = passwordEncoder;
+        this.communityService = communityService;
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -47,7 +51,13 @@ public class TenantUserCreationService {
         user.setEnabled(true);
 
         user = userRepository.save(user); // ✅ TENANT DB
-
+        
+        communityService.autoJoinGlobalCommunity(user.getUserId());
+        
+        communityService.autoJoinMarketingChannel(user.getUserId());
+        
+        communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
+        
         SystemSettings settings = new SystemSettings();
         settings.setUserId(user.getUserId());
         settings.setMaxLoginAttempts(3L);

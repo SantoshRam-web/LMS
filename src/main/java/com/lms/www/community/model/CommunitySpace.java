@@ -21,7 +21,7 @@ private Long spaceId;
 private String spaceName;
 
 @Column(name = "course_id")
-private String courseId;
+private Long courseId;
 
 @Column(name = "created_at")
 private LocalDateTime createdAt;

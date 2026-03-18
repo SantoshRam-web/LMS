@@ -76,4 +76,11 @@ List<CommunityNotification> getNotifications(Long userId);
 
 void autoJoinMarketingChannel(Long userId);
 
+void autoJoinGlobalCommunity(Long userId);
+
+void autoJoinRoleCommunity(Long userId, String roleName);
+
+void createCourseCommunity(Long courseId, String courseName);
+
+void addUserToCourseCommunity(Long courseId, Long userId, String roleName);
 }
