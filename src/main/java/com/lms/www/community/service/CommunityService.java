@@ -82,5 +82,7 @@ void autoJoinRoleCommunity(Long userId, String roleName);
 
 void createCourseCommunity(Long courseId, String courseName);
 
-void addUserToCourseCommunity(Long courseId, Long userId, String roleName);
+void addStudentToCourseCommunity(Long courseId, Long userId);
+
+void addInstructorToCourseCommunity(Long courseId, Long userId);
 }

@@ -116,6 +116,9 @@ public class SecurityConfig {
 
             	    // 🔐 SELF
             	    .requestMatchers("/me/**").authenticated()
+            	    
+            	    .requestMatchers("/api/v1/settings/**")
+            	    .hasAnyAuthority("ROLE_ADMIN", "ROLE_SUPER_ADMIN")
 
             	    .anyRequest().authenticated()
             	)

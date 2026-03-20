@@ -17,24 +17,30 @@ public class TempCourseController {
         this.communityService = communityService;
     }
 
-    // 1️⃣ Create course → create community
     @PostMapping("/create")
     public String createCourse(
             @RequestParam Long courseId,
             @RequestParam String courseName
-    ){
+    ) {
         communityService.createCourseCommunity(courseId, courseName);
         return "Course community created";
     }
 
-    // 2️⃣ Enroll user → add to community
-    @PostMapping("/enroll")
-    public String enrollUser(
+    @PostMapping("/add-student")
+    public String addStudent(
             @RequestParam Long courseId,
-            @RequestParam Long userId,
-            @RequestParam String roleName
-    ){
-        communityService.addUserToCourseCommunity(courseId, userId, roleName);
-        return "User added to course community";
+            @RequestParam Long userId
+    ) {
+        communityService.addStudentToCourseCommunity(courseId, userId);
+        return "Student added to course community";
+    }
+
+    @PostMapping("/add-instructor")
+    public String addInstructor(
+            @RequestParam Long courseId,
+            @RequestParam Long userId
+    ) {
+        communityService.addInstructorToCourseCommunity(courseId, userId);
+        return "Instructor added to course community";
     }
 }

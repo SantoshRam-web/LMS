@@ -359,6 +359,41 @@ public void autoJoinMarketingChannel(Long userId){
 }
 
 @Override
+public void addStudentToCourseCommunity(Long courseId, Long userId) {
+    addMemberToCourseCommunity(courseId, userId);
+}
+
+@Override
+public void addInstructorToCourseCommunity(Long courseId, Long userId) {
+    addMemberToCourseCommunity(courseId, userId);
+}
+
+private void addMemberToCourseCommunity(Long courseId, Long userId) {
+
+    CommunitySpace space = spaceRepo.findByCourseId(courseId)
+            .orElseThrow(() -> new RuntimeException("Course community not found"));
+
+    CommunityChannel channel = channelRepo
+            .findBySpaceIdAndChannelName(space.getSpaceId(), "general")
+            .orElseThrow(() -> new RuntimeException("Channel not found"));
+
+    boolean exists = memberRepo.existsByChannelIdAndUserId(
+            channel.getChannelId(),
+            userId
+    );
+
+    if (!exists) {
+        memberRepo.save(
+                CommunityChannelMember.builder()
+                        .channelId(channel.getChannelId())
+                        .userId(userId)
+                        .joinedAt(LocalDateTime.now())
+                        .build()
+        );
+    }
+}
+
+@Override
 public void createCourseCommunity(Long courseId, String courseName){
 
     // 1️⃣ Check if already exists (NO DUPLICATE)
@@ -391,39 +426,7 @@ public void createCourseCommunity(Long courseId, String courseName){
             });
 }
 
-@Override
-public void addUserToCourseCommunity(Long courseId, Long userId, String roleName){
 
-    // ❌ Only allow student & instructor
-    if (!"ROLE_STUDENT".equals(roleName) && !"ROLE_INSTRUCTOR".equals(roleName)) {
-        return;
-    }
-
-    // 1️⃣ Get space
-    CommunitySpace space = spaceRepo.findByCourseId(courseId)
-            .orElseThrow(() -> new RuntimeException("Course community not found"));
-
-    // 2️⃣ Get channel
-    CommunityChannel channel = channelRepo
-            .findBySpaceIdAndChannelName(space.getSpaceId(), "general")
-            .orElseThrow(() -> new RuntimeException("Channel not found"));
-
-    // 3️⃣ Prevent duplicate membership
-    boolean exists = memberRepo.existsByChannelIdAndUserId(
-            channel.getChannelId(),
-            userId
-    );
-
-    if (!exists) {
-        memberRepo.save(
-                CommunityChannelMember.builder()
-                        .channelId(channel.getChannelId())
-                        .userId(userId)
-                        .joinedAt(LocalDateTime.now())
-                        .build()
-        );
-    }
-}
 
 @Override
 public void autoJoinRoleCommunity(Long userId, String roleName){

@@ -650,4 +650,62 @@ CREATE TABLE community_channel_members (
     KEY idx_user_id (user_id)
 );
 
+CREATE TABLE platform_settings (
+    platform_setting_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    custom_domain VARCHAR(255),
+    cloudflare TINYINT(1) DEFAULT 0,
+    currency VARCHAR(50) NOT NULL DEFAULT 'USD ($)',
+    tax_type VARCHAR(50) NOT NULL DEFAULT 'None',
+    foreign_pricing TINYINT(1) DEFAULT 0,
+    tax_id VARCHAR(100),
+    bank_account VARCHAR(100),
+    ifsc VARCHAR(100),
+    enable_invoices TINYINT(1) DEFAULT 1,
+    legal_name VARCHAR(255),
+    tax_id_label VARCHAR(100) DEFAULT 'GSTIN',
+    address TEXT,
+    prefix VARCHAR(50) DEFAULT 'INV-',
+    serial BIGINT DEFAULT 1001,
+    footer_note TEXT
+);
+
+CREATE TABLE tenant_security_settings (
+    tenant_security_setting_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    max_devices BIGINT NOT NULL DEFAULT 2,
+    watermarking TINYINT(1) DEFAULT 1,
+    show_email TINYINT(1) DEFAULT 1,
+    show_phone TINYINT(1) DEFAULT 1,
+    show_ip TINYINT(1) DEFAULT 0,
+    admin_2fa TINYINT(1) DEFAULT 0,
+    google_login TINYINT(1) DEFAULT 1,
+    password_policy VARCHAR(100) NOT NULL DEFAULT 'Standard',
+    double_opt_in TINYINT(1) DEFAULT 0
+);
+
+CREATE TABLE tenant_communication_settings (
+    tenant_communication_setting_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    verification TINYINT(1) DEFAULT 1,
+    communication TINYINT(1) DEFAULT 1,
+    welcome_message TEXT,
+    sender_name VARCHAR(255) DEFAULT 'LMS Academy Team',
+    reply_to VARCHAR(255)
+);
+
+CREATE TABLE general_settings (
+    general_setting_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    logo LONGTEXT,
+    site_name VARCHAR(255),
+    language VARCHAR(20) DEFAULT 'en',
+    timezone VARCHAR(50) DEFAULT 'UTC'
+);
+
+CREATE TABLE custom_user_fields (
+    custom_field_id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    field_key VARCHAR(100),
+    label VARCHAR(255) NOT NULL,
+    type VARCHAR(100) NOT NULL,
+    icon VARCHAR(100),
+    display_order BIGINT
+);
+
 SET FOREIGN_KEY_CHECKS = 1;
