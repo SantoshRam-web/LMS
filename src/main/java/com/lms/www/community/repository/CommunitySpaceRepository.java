@@ -11,4 +11,6 @@ public interface CommunitySpaceRepository extends JpaRepository<CommunitySpace,L
 	List<CommunitySpace> findBySpaceNameContainingIgnoreCase(String name);
 	Optional<CommunitySpace> findBySpaceName(String spaceName);
 	Optional<CommunitySpace> findByCourseId(Long courseId);
+	
+	List<CommunitySpace> findBySpaceIdIn(List<Long> spaceIds);
 }

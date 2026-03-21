@@ -18,4 +18,5 @@ public interface ParentStudentRelationRepository
 
     void deleteByParent_User_UserId(Long userId);
 
+    boolean existsByParentAndStudent(Parent parent, Student student);
 }

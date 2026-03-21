@@ -19,4 +19,6 @@ public class ParentRequest {
     private String roleName;
     
     private List<String> permissions;
+    
+    private Long studentId;
 }

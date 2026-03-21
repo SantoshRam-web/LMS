@@ -301,15 +301,25 @@ public class AdminServiceImpl implements AdminService {
             student.setUser(user);
             student.setDob(request.getDob());
             student.setGender(request.getGender());
-            studentRepository.save(student);
-            
+            student = studentRepository.save(student);
+
+            // OPTIONAL mapping during student creation
+            if (request.getParentId() != null) {
+                mapParentToStudent(
+                        request.getParentId(),
+                        student.getStudentId(),
+                        admin,
+                        httpRequest
+                );
+            }
+
             saveUserPermissions(user, request.getPermissions());
-            
+
             if (!"ROLE_LEAD".equals(user.getRoleName())) {
                 communityService.autoJoinGlobalCommunity(user.getUserId());
                 communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
             }
-            
+
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("CREATE", "STUDENT", user.getUserId(), admin, httpRequest);
             emailService.sendRegistrationMail(user, user.getRoleName());
@@ -371,10 +381,20 @@ public class AdminServiceImpl implements AdminService {
 
             Parent parent = new Parent();
             parent.setUser(user);
-            parentRepository.save(parent);
-            
+            parent = parentRepository.save(parent);
+
+            // OPTIONAL mapping during parent creation
+            if (request.getStudentId() != null) {
+                mapParentToStudent(
+                        parent.getParentId(),
+                        request.getStudentId(),
+                        admin,
+                        httpRequest
+                );
+            }
+
             saveUserPermissions(user, request.getPermissions());
-            
+
             if (!"ROLE_LEAD".equals(user.getRoleName())) {
                 communityService.autoJoinGlobalCommunity(user.getUserId());
                 communityService.autoJoinRoleCommunity(user.getUserId(), user.getRoleName());
@@ -1016,14 +1036,20 @@ public class AdminServiceImpl implements AdminService {
         try {
             Parent parent = parentRepository.findById(parentId)
                     .orElseThrow(() -> new RuntimeException("Parent not found"));
+
             Student student = studentRepository.findById(studentId)
                     .orElseThrow(() -> new RuntimeException("Student not found"));
+
+            boolean alreadyMapped = parentStudentRelationRepository.existsByParentAndStudent(parent, student);
+            if (alreadyMapped) {
+                throw new RuntimeException("Parent is already mapped to this student");
+            }
 
             ParentStudentRelation relation = new ParentStudentRelation();
             relation.setParent(parent);
             relation.setStudent(student);
             parentStudentRelationRepository.save(relation);
-            
+
             emailService.sendParentStudentMappingMailToParent(
                     parent.getUser(),
                     student.getUser()
@@ -1033,7 +1059,6 @@ public class AdminServiceImpl implements AdminService {
                     student.getUser(),
                     parent.getUser()
             );
-
 
             proxy().markAuditStatus(admin.getUserId(), true);
             audit("MAP", "PARENT_STUDENT", relation.getRelId(), admin, request);

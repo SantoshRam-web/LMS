@@ -27,6 +27,7 @@ import com.lms.www.repository.UserRepository;
 import com.lms.www.service.EmailService;
 import com.lms.www.service.SuperAdminService;
 import com.lms.www.service.TenantUserCreationService;
+import com.lms.www.settings.service.TenantSettingsService;
 import com.lms.www.tenant.TenantContext;
 import com.lms.www.tenant.TenantResolver;
 import com.lms.www.tenant.TenantRoutingDataSource;
@@ -46,6 +47,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
     private final DataSource tenantRoutingDataSource;
     private final TenantResolver tenantResolver;
     private final JwtUtil jwtUtil;
+    private final TenantSettingsService tenantSettingsService;
 
     @Value("${spring.datasource.username}")
     private String dbUser;
@@ -63,7 +65,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
             TenantUserCreationService tenantUserCreationService,
             TenantResolver tenantResolver,
             @Qualifier("tenantRoutingDataSource") DataSource tenantRoutingDataSource,
-            JwtUtil jwtUtil
+            JwtUtil jwtUtil,
+            TenantSettingsService tenantSettingsService
     ) {
         this.otpRepo = otpRepo;
         this.userRepository = userRepository;
@@ -75,6 +78,7 @@ public class SuperAdminServiceImpl implements SuperAdminService {
         this.tenantRoutingDataSource = tenantRoutingDataSource;
         this.tenantResolver = tenantResolver;
         this.jwtUtil = jwtUtil;
+        this.tenantSettingsService = tenantSettingsService;
     }
 
     // ================= INIT SIGNUP =================
@@ -176,6 +180,8 @@ public class SuperAdminServiceImpl implements SuperAdminService {
                     lastName,
                     phone
             );
+            
+            tenantSettingsService.ensureDefaultSettings();
         } finally {
             TenantContext.clear();
         }

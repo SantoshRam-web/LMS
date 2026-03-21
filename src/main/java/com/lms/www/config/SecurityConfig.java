@@ -57,6 +57,8 @@ public class SecurityConfig {
             	    // 🔐 SUPER ADMIN (ALL OTHER SUPER ADMIN APIs)
             	    .requestMatchers("/super-admin/**").hasAuthority("ROLE_SUPER_ADMIN")
             	    
+            	    .requestMatchers(HttpMethod.GET, "/website/marketing-community").permitAll()
+            	    .requestMatchers("/website/marketing-community").permitAll()
             	    .requestMatchers("/website/**")
             	    .authenticated()
 

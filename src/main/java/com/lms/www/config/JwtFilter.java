@@ -68,9 +68,10 @@ public class JwtFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-    	if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
-            return true;   
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            return true;
         }
+
         String path = request.getRequestURI();
 
         return
@@ -108,10 +109,13 @@ public class JwtFilter extends OncePerRequestFilter {
             HttpServletResponse response,
             FilterChain filterChain
     ) throws ServletException, IOException {
-    	
+
         String path = request.getRequestURI();
-        
+
         boolean isLoginRequest = path.startsWith("/auth/login");
+
+        boolean isPublicMarketingRequest = path.equals("/website/marketing-community")
+                || path.startsWith("/website/marketing-community/");
 
         try {
             // ================================
@@ -122,7 +126,7 @@ public class JwtFilter extends OncePerRequestFilter {
             // ================================
             // 2️⃣ TENANT ENABLE CHECK (MASTER DB)
             // ================================
-            if (subdomain != null && !subdomain.equals("localhost")) {
+            if (subdomain != null) {
                 Boolean tenantEnabled;
                 try {
                     tenantEnabled = jdbcTemplate.queryForObject(
@@ -132,7 +136,6 @@ public class JwtFilter extends OncePerRequestFilter {
                     );
                 } catch (Exception ex) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    
                     return;
                 }
 
@@ -143,7 +146,24 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // ================================
-            // 3️⃣ TOKEN HANDLING
+            // 3️⃣ Resolve tenant DB from domain
+            // ================================
+            String tenantDbFromDomain = null;
+            if (subdomain != null) {
+                try {
+                    tenantDbFromDomain = jdbcTemplate.queryForObject(
+                            "SELECT tenant_db_name FROM tenant_registry WHERE tenant_domain = ?",
+                            String.class,
+                            subdomain
+                    );
+                } catch (Exception ex) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
+            }
+
+            // ================================
+            // 4️⃣ TOKEN HANDLING
             // ================================
             String authHeader = request.getHeader("Authorization");
             String token = null;
@@ -152,14 +172,13 @@ public class JwtFilter extends OncePerRequestFilter {
                 token = authHeader.substring(7);
             }
 
-            // 🔐 For protected APIs, token is mandatory
-            if (!isLoginRequest && token == null) {
+            if (!isLoginRequest && !isPublicMarketingRequest && token == null) {
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                 return;
             }
 
             // ================================
-            // 4️⃣ JWT VALIDATION (ONLY IF TOKEN PRESENT)
+            // 5️⃣ JWT VALIDATION (ONLY IF TOKEN PRESENT)
             // ================================
             if (token != null) {
                 try {
@@ -171,7 +190,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // ================================
-            // 5️⃣ LOGIN REQUEST → CONTINUE
+            // 6️⃣ LOGIN REQUEST → CONTINUE
             // ================================
             if (isLoginRequest) {
                 filterChain.doFilter(request, response);
@@ -179,7 +198,24 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // ================================
-            // 6️⃣ EXTRACT TENANT DB FROM JWT
+            // 7️⃣ PUBLIC MARKETING REQUEST
+            // Set tenant context using domain, no JWT required
+            // ================================
+            if (isPublicMarketingRequest) {
+                if (tenantDbFromDomain == null) {
+                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                    return;
+                }
+
+                routing().addTenant(tenantDbFromDomain);
+                TenantContext.setTenant(tenantDbFromDomain);
+
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // ================================
+            // 8️⃣ EXTRACT TENANT DB FROM JWT
             // ================================
             String tenantDb = jwtUtil.extractTenantDb(token);
             if (tenantDb == null) {
@@ -188,35 +224,23 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // ================================
-            // 7️⃣ DOMAIN ↔ TENANT VALIDATION
+            // 9️⃣ DOMAIN ↔ TENANT VALIDATION
             // ================================
-            if (subdomain != null && !path.startsWith("/platform/") && !subdomain.equals("localhost")) {
-                String expectedTenantDb;
-                try {
-                    expectedTenantDb = jdbcTemplate.queryForObject(
-                            "SELECT tenant_db_name FROM tenant_registry WHERE tenant_domain = ?",
-                            String.class,
-                            subdomain
-                    );
-                } catch (Exception ex) {
-                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                    return;
-                }
-                
-                if (!tenantDb.equals(expectedTenantDb)) {
+            if (subdomain != null && !path.startsWith("/platform/")) {
+                if (tenantDbFromDomain == null || !tenantDb.equals(tenantDbFromDomain)) {
                     response.setStatus(HttpServletResponse.SC_FORBIDDEN);
                     return;
                 }
             }
 
             // ================================
-            // 8️⃣ SWITCH TO TENANT DB
+            // 🔟 SWITCH TO TENANT DB
             // ================================
             routing().addTenant(tenantDb);
             TenantContext.setTenant(tenantDb);
 
             // ================================
-            // 9️⃣ LOAD USER
+            // 1️⃣1️⃣ LOAD USER
             // ================================
             String email = jwtUtil.extractEmail(token);
             User user = userRepository.findByEmail(email).orElse(null);
@@ -226,7 +250,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // ================================
-            // 🔟 VALIDATE SESSION
+            // 1️⃣2️⃣ VALIDATE SESSION
             // ================================
             UserSession session = userSessionRepository
                     .findByTokenAndLogoutTimeIsNull(token)
@@ -238,7 +262,7 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // ================================
-            // 1️⃣1️⃣ SESSION TIMEOUT CHECK
+            // 1️⃣3️⃣ SESSION TIMEOUT CHECK
             // ================================
             SystemSettings settings = systemSettingsRepository
                     .findByUserId(user.getUserId())
@@ -264,13 +288,13 @@ public class JwtFilter extends OncePerRequestFilter {
             }
 
             // ================================
-            // 1️⃣2️⃣ UPDATE ACTIVITY
+            // 1️⃣4️⃣ UPDATE ACTIVITY
             // ================================
             session.setLastActivityTime(LocalDateTime.now());
             userSessionRepository.save(session);
 
             // ================================
-            // 1️⃣3️⃣ BUILD AUTHORITIES
+            // 1️⃣5️⃣ BUILD AUTHORITIES
             // ================================
             List<SimpleGrantedAuthority> authorities = new ArrayList<>();
 

@@ -112,7 +112,7 @@ public class TenantSettingsServiceImpl implements TenantSettingsService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> getAllSettings() {
         ensureDefaultSettings();
 

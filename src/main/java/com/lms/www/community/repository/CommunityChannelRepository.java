@@ -12,4 +12,6 @@ public interface CommunityChannelRepository extends JpaRepository<CommunityChann
 List<CommunityChannel> findBySpaceId(Long spaceId);
 
 Optional<CommunityChannel> findBySpaceIdAndChannelName(Long spaceId, String channelName);
+
+List<CommunityChannel> findByChannelIdIn(List<Long> channelIds);
 }

@@ -2,6 +2,10 @@ package com.lms.www.community.service.impl;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 
@@ -481,5 +485,130 @@ public void autoJoinRoleCommunity(Long userId, String roleName){
                         .build()
         );
     }
+}
+
+@Override
+public Map<String, Object> getMyCommunities(Long userId) {
+
+    List<CommunityChannelMember> memberships = memberRepo.findByUserId(userId);
+
+    Map<String, Object> response = new HashMap<>();
+    response.put("userId", userId);
+
+    if (memberships.isEmpty()) {
+        response.put("spaces", new ArrayList<>());
+        return response;
+    }
+
+    List<Long> channelIds = memberships.stream()
+            .map(CommunityChannelMember::getChannelId)
+            .toList();
+
+    List<CommunityChannel> channels = channelRepo.findByChannelIdIn(channelIds);
+
+    if (channels.isEmpty()) {
+        response.put("spaces", new ArrayList<>());
+        return response;
+    }
+
+    List<Long> spaceIds = channels.stream()
+            .map(CommunityChannel::getSpaceId)
+            .distinct()
+            .toList();
+
+    List<CommunitySpace> spaces = spaceRepo.findBySpaceIdIn(spaceIds);
+
+    Map<Long, CommunitySpace> spaceMap = new HashMap<>();
+    for (CommunitySpace space : spaces) {
+        spaceMap.put(space.getSpaceId(), space);
+    }
+
+    Map<Long, Map<String, Object>> groupedSpaces = new LinkedHashMap<>();
+
+    for (CommunityChannel channel : channels) {
+        CommunitySpace space = spaceMap.get(channel.getSpaceId());
+        if (space == null) {
+            continue;
+        }
+
+        Map<String, Object> spaceObj = groupedSpaces.get(space.getSpaceId());
+        if (spaceObj == null) {
+            spaceObj = new LinkedHashMap<>();
+            spaceObj.put("spaceId", space.getSpaceId());
+            spaceObj.put("spaceName", space.getSpaceName());
+            spaceObj.put("channels", new ArrayList<Map<String, Object>>());
+            groupedSpaces.put(space.getSpaceId(), spaceObj);
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> channelList =
+                (List<Map<String, Object>>) spaceObj.get("channels");
+
+        Map<String, Object> channelObj = new LinkedHashMap<>();
+        channelObj.put("channelId", channel.getChannelId());
+        channelObj.put("channelName", channel.getChannelName());
+        channelObj.put("channelType", channel.getChannelType());
+        channelObj.put("description", channel.getDescription());
+
+        channelList.add(channelObj);
+    }
+
+    response.put("spaces", new ArrayList<>(groupedSpaces.values()));
+    return response;
+}
+
+@Override
+public Map<String, Object> getMarketingCommunity() {
+
+    CommunitySpace marketingSpace = spaceRepo
+            .findBySpaceName("Marketing Community")
+            .orElseGet(() -> {
+                CommunitySpace newSpace = CommunitySpace.builder()
+                        .spaceName("Marketing Community")
+                        .createdAt(LocalDateTime.now())
+                        .build();
+                return spaceRepo.save(newSpace);
+            });
+
+    List<CommunityChannel> channels = channelRepo.findBySpaceId(marketingSpace.getSpaceId());
+
+    // Safety: create default marketing channel if missing
+    if (channels == null || channels.isEmpty()) {
+        CommunityChannel marketingChannel = CommunityChannel.builder()
+                .spaceId(marketingSpace.getSpaceId())
+                .channelName("marketing-updates")
+                .channelType("DISCUSSION")
+                .description("Course discounts and announcements")
+                .adminsOnly(false)
+                .createdAt(LocalDateTime.now())
+                .build();
+
+        channelRepo.save(marketingChannel);
+        channels = channelRepo.findBySpaceId(marketingSpace.getSpaceId());
+    }
+
+    Map<String, Object> response = new LinkedHashMap<>();
+    response.put("spaceId", marketingSpace.getSpaceId());
+    response.put("spaceName", marketingSpace.getSpaceName());
+
+    List<Map<String, Object>> channelList = new ArrayList<>();
+
+    for (CommunityChannel channel : channels) {
+        // Only public-safe channels
+        if (Boolean.TRUE.equals(channel.getAdminsOnly())) {
+            continue;
+        }
+
+        Map<String, Object> channelObj = new LinkedHashMap<>();
+        channelObj.put("channelId", channel.getChannelId());
+        channelObj.put("channelName", channel.getChannelName());
+        channelObj.put("channelType", channel.getChannelType());
+        channelObj.put("description", channel.getDescription());
+
+        channelList.add(channelObj);
+    }
+
+    response.put("channels", channelList);
+    return response;
 }
 }

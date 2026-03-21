@@ -23,4 +23,6 @@ public class StudentRequest {
     private String gender;
     
     private List<String> permissions;
+    
+    private Long parentId;
 }

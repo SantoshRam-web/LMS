@@ -85,4 +85,8 @@ void createCourseCommunity(Long courseId, String courseName);
 void addStudentToCourseCommunity(Long courseId, Long userId);
 
 void addInstructorToCourseCommunity(Long courseId, Long userId);
+
+java.util.Map<String, Object> getMyCommunities(Long userId);
+
+java.util.Map<String, Object> getMarketingCommunity();
 }
