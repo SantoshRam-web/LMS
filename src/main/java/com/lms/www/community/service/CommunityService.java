@@ -89,4 +89,6 @@ void addInstructorToCourseCommunity(Long courseId, Long userId);
 java.util.Map<String, Object> getMyCommunities(Long userId);
 
 java.util.Map<String, Object> getMarketingCommunity();
+
+void removeLeadFromMarketingChannel(Long userId);
 }

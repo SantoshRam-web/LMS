@@ -611,4 +611,25 @@ public Map<String, Object> getMarketingCommunity() {
     response.put("channels", channelList);
     return response;
 }
+
+@Override
+public void removeLeadFromMarketingChannel(Long userId) {
+    CommunitySpace marketingSpace = spaceRepo.findBySpaceName("Marketing Community")
+            .orElse(null);
+
+    if (marketingSpace == null) {
+        return;
+    }
+
+    CommunityChannel marketingChannel = channelRepo
+            .findBySpaceIdAndChannelName(marketingSpace.getSpaceId(), "marketing-updates")
+            .orElse(null);
+
+    if (marketingChannel == null) {
+        return;
+    }
+
+    memberRepo.findByChannelIdAndUserId(marketingChannel.getChannelId(), userId)
+            .ifPresent(memberRepo::delete);
+}
 }

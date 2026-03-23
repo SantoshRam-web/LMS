@@ -1,6 +1,7 @@
 package com.lms.www.community.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -12,4 +13,6 @@ public interface CommunityChannelMemberRepository
     boolean existsByChannelIdAndUserId(Long channelId, Long userId);
     
     List<CommunityChannelMember> findByUserId(Long userId);
+    
+    Optional<CommunityChannelMember> findByChannelIdAndUserId(Long channelId, Long userId);
 }

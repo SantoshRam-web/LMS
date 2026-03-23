@@ -286,24 +286,39 @@ public class AdminServiceImpl implements AdminService {
     @Override
     public void createStudent(StudentRequest request, User admin, HttpServletRequest httpRequest) {
         try {
-            User user = createBaseUser(
-                    request.getFirstName(),
-                    request.getLastName(),
-                    request.getEmail(),
-                    request.getPassword(),
-                    request.getPhone(),
-                    request.getRoleName(),
-                    admin,
-                    httpRequest
-            );
+            User user = findMatchingLeadForStudentConversion(request);
 
-            Student student = new Student();
-            student.setUser(user);
-            student.setDob(request.getDob());
-            student.setGender(request.getGender());
+            if (user != null) {
+                user = convertLeadToStudentUser(user, request, admin, httpRequest);
+            } else {
+                user = createBaseUser(
+                        request.getFirstName(),
+                        request.getLastName(),
+                        request.getEmail(),
+                        request.getPassword(),
+                        request.getPhone(),
+                        request.getRoleName(),
+                        admin,
+                        httpRequest
+                );
+            }
+
+            Student existingStudent = studentRepository.findByUser_UserId(user.getUserId()).orElse(null);
+            Student student;
+
+            if (existingStudent != null) {
+                student = existingStudent;
+                student.setDob(request.getDob());
+                student.setGender(request.getGender());
+            } else {
+                student = new Student();
+                student.setUser(user);
+                student.setDob(request.getDob());
+                student.setGender(request.getGender());
+            }
+
             student = studentRepository.save(student);
 
-            // OPTIONAL mapping during student creation
             if (request.getParentId() != null) {
                 mapParentToStudent(
                         request.getParentId(),
@@ -1304,5 +1319,94 @@ public class AdminServiceImpl implements AdminService {
 
         audit("ADD_PERMISSIONS", "USER", userId, admin, request);
     }
+    
+    private User findMatchingLeadForStudentConversion(StudentRequest request) {
+        User emailLead = null;
+        User phoneLead = null;
 
+        if (request.getEmail() != null && !request.getEmail().trim().isEmpty()) {
+            emailLead = userRepository.findByEmail(request.getEmail().trim()).orElse(null);
+        }
+
+        if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
+            phoneLead = userRepository.findByPhone(request.getPhone().trim()).orElse(null);
+        }
+
+        if (emailLead != null && !"ROLE_LEAD".equals(emailLead.getRoleName())) {
+            throw new RuntimeException("User already exists with email: " + request.getEmail());
+        }
+
+        if (phoneLead != null && !"ROLE_LEAD".equals(phoneLead.getRoleName())) {
+            throw new RuntimeException("Phone number already in use");
+        }
+
+        if (emailLead != null && phoneLead != null && !emailLead.getUserId().equals(phoneLead.getUserId())) {
+            throw new RuntimeException("Conflicting lead records found for email/phone");
+        }
+
+        if (emailLead != null) {
+            return emailLead;
+        }
+
+        if (phoneLead != null) {
+            return phoneLead;
+        }
+
+        return null;
+    }
+    
+    private User convertLeadToStudentUser(
+            User leadUser,
+            StudentRequest request,
+            User admin,
+            HttpServletRequest httpRequest
+    ) {
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new RuntimeException("Password is required for role: ROLE_STUDENT");
+        }
+
+        if (request.getPassword().length() < 10) {
+            throw new RuntimeException("Password must be at least 10 characters");
+        }
+
+        leadUser.setFirstName(request.getFirstName());
+        leadUser.setLastName(request.getLastName());
+        leadUser.setEmail(request.getEmail().trim());
+        leadUser.setPhone(request.getPhone().trim());
+        leadUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        leadUser.setEnabled(true);
+        leadUser.setRoleName("ROLE_STUDENT");
+
+        User savedUser = userRepository.save(leadUser);
+
+        createSystemSettingsIfMissing(savedUser.getUserId());
+
+        communityService.removeLeadFromMarketingChannel(savedUser.getUserId());
+
+        return savedUser;
+    }
+    
+    private void createSystemSettingsIfMissing(Long userId) {
+        boolean exists = systemSettingsRepository.findByUserId(userId).isPresent();
+
+        if (exists) {
+            return;
+        }
+
+        SystemSettings settings = new SystemSettings();
+        settings.setUserId(userId);
+        settings.setMaxLoginAttempts(3L);
+        settings.setAccLockDuration(30L);
+        settings.setPassExpiryDays(60L);
+        settings.setPassLength(10L);
+        settings.setJwtExpiryMins(60L);
+        settings.setSessionTimeout(360L);
+        settings.setMultiSession(false);
+        settings.setEnableLoginAudit(null);
+        settings.setEnableAuditLog(null);
+        settings.setPasswordLastUpdatedAt(LocalDateTime.now());
+        settings.setUpdatedTime(LocalDateTime.now());
+
+        systemSettingsRepository.save(settings);
+    }
 }
