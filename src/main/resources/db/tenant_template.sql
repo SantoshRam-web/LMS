@@ -3470,4 +3470,1871 @@ CREATE TABLE IF NOT EXISTS vehicle_maintenance (
     PRIMARY KEY (id)
 );
 
+-- =====================
+-- approvals
+-- =====================
+DROP TABLE IF EXISTS `approvals`;
+CREATE TABLE `approvals` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `request_type` VARCHAR(100) DEFAULT NULL,
+  `description` VARCHAR(255) DEFAULT NULL,
+  `requested_by` VARCHAR(255) DEFAULT NULL,
+  `status` VARCHAR(50) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- attendance_alert_flag
+-- =====================
+DROP TABLE IF EXISTS `attendance_alert_flag`;
+CREATE TABLE `attendance_alert_flag` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `student_id` BIGINT NOT NULL,
+  `course_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+  `flag_type` VARCHAR(50) NOT NULL,
+
+  `status` VARCHAR(20) NOT NULL,
+  `message` VARCHAR(500) DEFAULT NULL,
+
+  `created_at` DATETIME NOT NULL,
+  `resolved_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_attendance_alert_flag`
+  (`student_id`, `course_id`, `batch_id`, `flag_type`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- attendance_config
+-- =====================
+DROP TABLE IF EXISTS `attendance_config`;
+CREATE TABLE `attendance_config` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `course_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+
+  `exam_eligibility_percent` INT NOT NULL,
+  `at_risk_percent` INT NOT NULL,
+
+  `late_grace_minutes` INT NOT NULL,
+  `min_presence_minutes` INT NOT NULL,
+  `auto_absent_minutes` INT NOT NULL,
+
+  `early_exit_action` VARCHAR(50) NOT NULL,
+
+  `allow_offline` TINYINT(1) NOT NULL,
+  `allow_manual_override` TINYINT(1) NOT NULL,
+  `require_override_reason` TINYINT(1) NOT NULL,
+  `notify_parents` TINYINT(1) NOT NULL,
+  `one_device_per_session` TINYINT(1) NOT NULL,
+  `log_ip_address` TINYINT(1) NOT NULL,
+  `strict_start` TINYINT(1) NOT NULL,
+  `qr_code_mode` VARCHAR(50) NOT NULL,
+
+  `grace_period_minutes` INT NOT NULL,
+  `consecutive_absence_limit` INT NOT NULL,
+
+  `created_by` BIGINT NOT NULL,
+  `updated_by` BIGINT NOT NULL,
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_attendance_config`
+  (`course_id`, `batch_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- attendance_offline_queue
+-- =====================
+DROP TABLE IF EXISTS `attendance_offline_queue`;
+CREATE TABLE `attendance_offline_queue` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `session_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+  `student_id` BIGINT NOT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+  `remarks` VARCHAR(255) DEFAULT NULL,
+
+  `queued_at` DATETIME NOT NULL,
+  `synced` TINYINT(1) NOT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- attendance_record
+-- =====================
+DROP TABLE IF EXISTS `attendance_record`;
+CREATE TABLE `attendance_record` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `attendance_session_id` BIGINT NOT NULL,
+  `batch_id` BIGINT DEFAULT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+  `remarks` VARCHAR(255) DEFAULT NULL,
+  `late_minutes` INT DEFAULT NULL,
+  `left_at` DATETIME DEFAULT NULL,
+
+  `marked_by` BIGINT NOT NULL,
+  `marked_at` DATETIME NOT NULL,
+
+  `attendance_date` DATE NOT NULL,
+  `source` VARCHAR(50) NOT NULL,
+
+  `student_id` BIGINT DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_attendance_record`
+  (`batch_id`, `student_id`, `attendance_date`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- attendance_session
+-- =====================
+DROP TABLE IF EXISTS `attendance_session`;
+CREATE TABLE `attendance_session` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `session_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+  `course_id` BIGINT NOT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+
+  `started_at` DATETIME NOT NULL,
+  `ended_at` DATETIME DEFAULT NULL,
+
+  `created_by` BIGINT NOT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_attendance_session`
+  (`session_id`, `batch_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- attendance_upload_job
+-- =====================
+DROP TABLE IF EXISTS `attendance_upload_job`;
+CREATE TABLE `attendance_upload_job` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `course_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+  `session_id` BIGINT DEFAULT NULL,
+
+  `attendance_date` DATE NOT NULL,
+  `file_path` VARCHAR(255) NOT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+
+  `uploaded_by` BIGINT NOT NULL,
+  `uploaded_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- automation_controls
+-- =====================
+DROP TABLE IF EXISTS `automation_controls`;
+CREATE TABLE `automation_controls` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+  `rule_name` VARCHAR(255) NOT NULL,
+  `is_enabled` TINYINT(1) DEFAULT NULL,
+  `last_run_date` DATETIME DEFAULT NULL,
+  `action_count` INT DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_rule_name` (`rule_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- batch
+-- =====================
+DROP TABLE IF EXISTS `batch`;
+CREATE TABLE `batch` (
+  `batch_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `course_id` BIGINT NOT NULL,
+  `batch_name` VARCHAR(255) NOT NULL,
+  `trainer_id` BIGINT NOT NULL,
+  `trainer_name` VARCHAR(255) NOT NULL,
+
+  `start_date` DATE NOT NULL,
+  `end_date` DATE DEFAULT NULL,
+
+  `max_students` INT DEFAULT NULL,
+
+  `free_batch` TINYINT(1) NOT NULL,
+  `fee` DOUBLE DEFAULT NULL,
+
+  `content_access` TINYINT(1) NOT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`batch_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- certificate
+-- =====================
+DROP TABLE IF EXISTS `certificate`;
+CREATE TABLE `certificate` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `certificate_id` VARCHAR(255) NOT NULL,
+  `verification_token` VARCHAR(255) NOT NULL,
+
+  `user_id` BIGINT NOT NULL,
+  `student_name` VARCHAR(255) NOT NULL,
+  `student_email` VARCHAR(255) NOT NULL,
+
+  `target_type` VARCHAR(50) NOT NULL,
+  `target_id` BIGINT NOT NULL,
+
+  `event_title` VARCHAR(255) NOT NULL,
+
+  `template_id` BIGINT DEFAULT NULL,
+
+  `score` DOUBLE DEFAULT NULL,
+
+  `issued_date` DATETIME NOT NULL,
+  `expiry_date` DATETIME DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `revoked_reason` VARCHAR(255) DEFAULT NULL,
+  `revoked_at` DATETIME DEFAULT NULL,
+
+  `version` INT NOT NULL,
+
+  `pdf_url` VARCHAR(255) DEFAULT NULL,
+
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uq_certificate_id` (`certificate_id`),
+  UNIQUE KEY `uq_verification_token` (`verification_token`),
+  UNIQUE KEY `uq_user_target` (`user_id`, `target_type`, `target_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- certificate_audit_log
+-- =====================
+DROP TABLE IF EXISTS `certificate_audit_log`;
+CREATE TABLE `certificate_audit_log` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `certificate_id` BIGINT NOT NULL,
+  `action` VARCHAR(50) NOT NULL,
+  `performed_by` BIGINT DEFAULT NULL,
+  `action_date` DATETIME NOT NULL,
+  `remarks` VARCHAR(255) DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- certificate_progress
+-- =====================
+DROP TABLE IF EXISTS `certificate_progress`;
+CREATE TABLE `certificate_progress` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `user_id` BIGINT NOT NULL,
+  `target_type` VARCHAR(50) NOT NULL,
+  `target_id` BIGINT NOT NULL,
+
+  `completion_percent` DOUBLE DEFAULT NULL,
+  `score` DOUBLE DEFAULT NULL,
+  `attendance_percent` DOUBLE DEFAULT NULL,
+  `submission_completed` TINYINT(1) DEFAULT NULL,
+
+  `eligibility_status` VARCHAR(50) NOT NULL,
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uq_user_target_progress`
+  (`user_id`, `target_type`, `target_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- certificate_renewal
+-- =====================
+DROP TABLE IF EXISTS `certificate_renewal`;
+CREATE TABLE `certificate_renewal` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `certificate_id` BIGINT NOT NULL,
+  `previous_expiry` DATETIME DEFAULT NULL,
+  `new_expiry` DATETIME NOT NULL,
+  `renewed_on` DATETIME NOT NULL,
+  `renewed_by` BIGINT DEFAULT NULL,
+  `remarks` VARCHAR(255) DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- certificate_requests
+-- =====================
+DROP TABLE IF EXISTS `certificate_requests`;
+CREATE TABLE `certificate_requests` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `user_id` BIGINT NOT NULL,
+  `student_name` VARCHAR(255) NOT NULL,
+  `student_email` VARCHAR(255) NOT NULL,
+
+  `target_type` VARCHAR(50) NOT NULL,
+  `target_id` BIGINT NOT NULL,
+  `event_title` VARCHAR(255) NOT NULL,
+
+  `score` DOUBLE DEFAULT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+  `request_date` DATETIME NOT NULL,
+
+  `reviewed_by` BIGINT DEFAULT NULL,
+  `reviewed_at` DATETIME DEFAULT NULL,
+
+  `certificate_id` BIGINT DEFAULT NULL,
+
+  `admin_comment` TEXT,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- certificate_rule
+-- =====================
+DROP TABLE IF EXISTS `certificate_rule`;
+CREATE TABLE `certificate_rule` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `target_type` VARCHAR(50) NOT NULL,
+  `target_id` BIGINT NOT NULL,
+
+  `score_required` TINYINT(1) DEFAULT NULL,
+  `required_score` DECIMAL(5,2) DEFAULT NULL,
+
+  `attendance_required` TINYINT(1) DEFAULT NULL,
+  `min_attendance` DECIMAL(5,2) DEFAULT NULL,
+
+  `is_enabled` TINYINT(1) DEFAULT NULL,
+
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uq_rule`
+  (`target_type`, `target_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- certificate_template
+-- =====================
+DROP TABLE IF EXISTS `certificate_template`;
+CREATE TABLE `certificate_template` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `template_name` VARCHAR(255) NOT NULL,
+  `template_type` VARCHAR(255) DEFAULT NULL,
+
+  `target_type` VARCHAR(50) DEFAULT NULL,
+  `target_id` BIGINT DEFAULT NULL,
+
+  `template_file_url` TEXT,
+  `logo_url` VARCHAR(255) DEFAULT NULL,
+  `background_image_url` VARCHAR(255) DEFAULT NULL,
+  `signature_url` VARCHAR(255) DEFAULT NULL,
+
+  `is_active` TINYINT(1) NOT NULL,
+
+  `layout_config_json` TEXT,
+
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- =====================
+-- coding_execution_result
+-- =====================
+DROP TABLE IF EXISTS `coding_execution_result`;
+CREATE TABLE `coding_execution_result` (
+  `execution_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `response_id` BIGINT NOT NULL,
+  `test_case_id` BIGINT NOT NULL,
+
+  `actual_output` TEXT,
+
+  `passed` TINYINT(1) NOT NULL,
+
+  `execution_status` VARCHAR(20) NOT NULL,
+
+  `execution_time_ms` BIGINT DEFAULT NULL,
+
+  `error_message` TEXT,
+
+  PRIMARY KEY (`execution_id`),
+
+  KEY `idx_response` (`response_id`),
+  KEY `idx_testcase` (`test_case_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- coding_test_case
+-- =====================
+DROP TABLE IF EXISTS `coding_test_case`;
+CREATE TABLE `coding_test_case` (
+  `test_case_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `question_id` BIGINT NOT NULL,
+
+  `input_data` TEXT NOT NULL,
+  `expected_output` TEXT NOT NULL,
+
+  `hidden` TINYINT(1) NOT NULL,
+
+  PRIMARY KEY (`test_case_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- courses
+-- =====================
+DROP TABLE IF EXISTS `courses`;
+CREATE TABLE `courses` (
+  `course_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `course_name` VARCHAR(255) NOT NULL,
+  `description` VARCHAR(255) DEFAULT NULL,
+  `duration` VARCHAR(255) DEFAULT NULL,
+  `tools_covered` VARCHAR(255) DEFAULT NULL,
+  `course_fee` DOUBLE DEFAULT NULL,
+
+  `certificate_provided` TINYINT(1) DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `show_validity` TINYINT(1) DEFAULT NULL,
+  `validity_in_days` INT DEFAULT NULL,
+
+  `allow_offline_mobile` TINYINT(1) DEFAULT NULL,
+  `allow_bookmark` TINYINT(1) DEFAULT NULL,
+
+  `course_image_url` VARCHAR(255) DEFAULT NULL,
+
+  `share_code` VARCHAR(255) DEFAULT NULL,
+  `share_enabled` TINYINT(1) DEFAULT NULL,
+
+  `certificate_template_id` BIGINT DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  `course_title` VARCHAR(255) DEFAULT NULL,
+  `course_description` VARCHAR(255) DEFAULT NULL,
+
+  PRIMARY KEY (`course_id`),
+
+  UNIQUE KEY `uk_course_name` (`course_name`),
+  UNIQUE KEY `uk_share_code` (`share_code`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- course_batch_stats
+-- =====================
+DROP TABLE IF EXISTS `course_batch_stats`;
+CREATE TABLE `course_batch_stats` (
+  `course_id` BIGINT NOT NULL,
+
+  `total_batches` INT DEFAULT NULL,
+  `running_batches` INT DEFAULT NULL,
+  `upcoming_batches` INT DEFAULT NULL,
+  `completed_batches` INT DEFAULT NULL,
+  `parallel_batches` INT DEFAULT NULL,
+  `required_trainers` INT DEFAULT NULL,
+
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`course_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- course_inventory_mapping
+-- =====================
+DROP TABLE IF EXISTS `course_inventory_mapping`;
+CREATE TABLE `course_inventory_mapping` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `course_id` BIGINT DEFAULT NULL,
+  `item_id` BIGINT DEFAULT NULL,
+
+  `mandatory` TINYINT(1) DEFAULT NULL,
+  `quantity_required` INT DEFAULT NULL,
+  `auto_reserve` TINYINT(1) DEFAULT NULL,
+
+  `price` DOUBLE DEFAULT NULL,
+  `refundable` TINYINT(1) DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- digital_assets
+-- =====================
+DROP TABLE IF EXISTS `digital_assets`;
+CREATE TABLE `digital_assets` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `software_name` VARCHAR(255) DEFAULT NULL,
+  `license_key` VARCHAR(255) DEFAULT NULL,
+
+  `total_licenses` INT DEFAULT NULL,
+  `used_licenses` INT DEFAULT NULL,
+  `available_licenses` INT DEFAULT NULL,
+
+  `assigned_to` BIGINT DEFAULT NULL,
+  `vendor_id` BIGINT DEFAULT NULL,
+
+  `cost_per_license` DOUBLE DEFAULT NULL,
+
+  `activation_date` DATE DEFAULT NULL,
+  `expiry_date` DATE DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+  `remarks` VARCHAR(255) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_license_key` (`license_key`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+
+
+-- =====================
+-- exam
+-- =====================
+DROP TABLE IF EXISTS `exam`;
+CREATE TABLE `exam` (
+  `exam_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_type` VARCHAR(50) NOT NULL,
+  `title` VARCHAR(255) NOT NULL,
+
+  `total_marks` INT NOT NULL,
+  `pass_percentage` DOUBLE NOT NULL,
+  `duration_minutes` INT NOT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `is_deleted` TINYINT(1) NOT NULL,
+
+  `created_by` BIGINT NOT NULL,
+
+  `course_id` BIGINT DEFAULT NULL,
+  `batch_id` BIGINT DEFAULT NULL,
+
+  `start_time` DATETIME DEFAULT NULL,
+
+  `certificate_template_id` BIGINT DEFAULT NULL,
+  `certificate_enabled` TINYINT(1) NOT NULL,
+
+  PRIMARY KEY (`exam_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- exam_attempt
+-- =====================
+DROP TABLE IF EXISTS `exam_attempt`;
+CREATE TABLE `exam_attempt` (
+  `attempt_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+  `student_id` BIGINT NOT NULL,
+  `attempt_number` INT NOT NULL,
+
+  `start_time` DATETIME DEFAULT NULL,
+  `end_time` DATETIME DEFAULT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+  `score` DOUBLE DEFAULT NULL,
+
+  PRIMARY KEY (`attempt_id`),
+
+  UNIQUE KEY `uk_exam_attempt`
+  (`exam_id`, `student_id`, `attempt_number`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+
+-- =====================
+-- exam_design
+-- =====================
+DROP TABLE IF EXISTS `exam_design`;
+CREATE TABLE `exam_design` (
+  `design_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+
+  `orientation` VARCHAR(50) NOT NULL,
+
+  `institute_logo_path` VARCHAR(255) DEFAULT NULL,
+  `background_image_path` VARCHAR(255) DEFAULT NULL,
+
+  `watermark_type` VARCHAR(50) DEFAULT NULL,
+  `watermark_value` VARCHAR(255) DEFAULT NULL,
+  `watermark_opacity` INT DEFAULT NULL,
+
+  PRIMARY KEY (`design_id`),
+
+  UNIQUE KEY `uk_exam_design`
+  (`exam_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- exam_evaluation_log
+-- =====================
+DROP TABLE IF EXISTS `exam_evaluation_log`;
+CREATE TABLE `exam_evaluation_log` (
+  `log_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `attempt_id` BIGINT NOT NULL,
+  `evaluator_id` BIGINT NOT NULL,
+
+  `old_score` DOUBLE NOT NULL,
+  `new_score` DOUBLE NOT NULL,
+
+  `reason` VARCHAR(255) NOT NULL,
+
+  `updated_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`log_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- exam_grading
+-- =====================
+DROP TABLE IF EXISTS `exam_grading`;
+CREATE TABLE `exam_grading` (
+  `grading_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+
+  `auto_evaluation` TINYINT(1) NOT NULL,
+  `partial_marking` TINYINT(1) NOT NULL,
+  `show_result` TINYINT(1) NOT NULL,
+  `show_rank` TINYINT(1) NOT NULL,
+  `show_percentile` TINYINT(1) NOT NULL,
+
+  PRIMARY KEY (`grading_id`),
+
+  UNIQUE KEY `uk_exam_grading`
+  (`exam_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- exam_notification
+-- =====================
+DROP TABLE IF EXISTS `exam_notification`;
+CREATE TABLE `exam_notification` (
+  `notification_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+
+  `scheduled_notification` TINYINT(1) NOT NULL,
+  `reminder_before` VARCHAR(50) NOT NULL,
+  `feedback_after_exam` TINYINT(1) NOT NULL,
+
+  PRIMARY KEY (`notification_id`),
+
+  UNIQUE KEY `uk_exam_notification`
+  (`exam_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+
+-- =====================
+-- exam_proctoring
+-- =====================
+DROP TABLE IF EXISTS `exam_proctoring`;
+CREATE TABLE `exam_proctoring` (
+  `proctoring_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+
+  `enabled` TINYINT(1) NOT NULL,
+  `camera_required` TINYINT(1) NOT NULL,
+  `system_check_required` TINYINT(1) NOT NULL,
+  `violation_limit` INT NOT NULL,
+
+  PRIMARY KEY (`proctoring_id`),
+
+  UNIQUE KEY `uk_exam_proctoring`
+  (`exam_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+
+
+-- =====================
+-- exam_question
+-- =====================
+DROP TABLE IF EXISTS `exam_question`;
+CREATE TABLE `exam_question` (
+  `exam_question_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_section_id` BIGINT NOT NULL,
+  `question_id` BIGINT NOT NULL,
+
+  `marks` DOUBLE NOT NULL,
+  `question_order` INT NOT NULL,
+
+  PRIMARY KEY (`exam_question_id`),
+
+  UNIQUE KEY `uk_exam_question`
+  (`exam_section_id`, `question_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- =====================
+-- exam_response
+-- =====================
+DROP TABLE IF EXISTS `exam_response`;
+CREATE TABLE `exam_response` (
+  `response_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `attempt_id` BIGINT NOT NULL,
+  `exam_question_id` BIGINT NOT NULL,
+
+  `selected_option_id` BIGINT DEFAULT NULL,
+
+  `descriptive_answer` TEXT,
+
+  `coding_submission_code` LONGTEXT,
+
+  `marks_awarded` DOUBLE DEFAULT NULL,
+  `evaluation_type` VARCHAR(50) DEFAULT NULL,
+
+  PRIMARY KEY (`response_id`),
+
+  UNIQUE KEY `uk_exam_response`
+  (`attempt_id`, `exam_question_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- exam_schedule
+-- =====================
+DROP TABLE IF EXISTS `exam_schedule`;
+CREATE TABLE `exam_schedule` (
+  `schedule_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+  `course_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+
+  `start_time` DATETIME DEFAULT NULL,
+  `end_time` DATETIME DEFAULT NULL,
+
+  `is_active` TINYINT(1) NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`schedule_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- exam_section
+-- =====================
+DROP TABLE IF EXISTS `exam_section`;
+CREATE TABLE `exam_section` (
+  `exam_section_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+  `section_id` BIGINT NOT NULL,
+
+  `section_order` INT DEFAULT NULL,
+  `shuffle_questions` TINYINT(1) DEFAULT NULL,
+
+  PRIMARY KEY (`exam_section_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- exam_settings
+-- =====================
+DROP TABLE IF EXISTS `exam_settings`;
+CREATE TABLE `exam_settings` (
+  `settings_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `exam_id` BIGINT NOT NULL,
+
+  `attempts_allowed` INT NOT NULL,
+
+  `negative_marking` TINYINT(1) NOT NULL,
+  `negative_mark_value` DOUBLE DEFAULT NULL,
+
+  `shuffle_questions` TINYINT(1) NOT NULL,
+  `shuffle_options` TINYINT(1) NOT NULL,
+
+  `allow_late_entry` TINYINT(1) NOT NULL,
+
+  `network_mode` VARCHAR(50) NOT NULL,
+
+  PRIMARY KEY (`settings_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- exam_violation
+-- =====================
+DROP TABLE IF EXISTS `exam_violation`;
+CREATE TABLE `exam_violation` (
+  `violation_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `attempt_id` BIGINT NOT NULL,
+  `violation_type` VARCHAR(50) NOT NULL,
+  `violation_time` DATETIME NOT NULL,
+
+  PRIMARY KEY (`violation_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- faqs
+-- =====================
+DROP TABLE IF EXISTS `faqs`;
+CREATE TABLE `faqs` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `question` VARCHAR(500) NOT NULL,
+  `answer` TEXT NOT NULL,
+  `category` VARCHAR(50) NOT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- inventory_stock
+-- =====================
+DROP TABLE IF EXISTS `inventory_stock`;
+CREATE TABLE `inventory_stock` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `item_id` BIGINT NOT NULL,
+
+  `total_stock` INT DEFAULT NULL,
+  `available_stock` INT DEFAULT NULL,
+  `reserved_stock` INT DEFAULT NULL,
+  `damaged_stock` INT DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_inventory_stock_item`
+  (`item_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- inventory_transactions
+-- =====================
+DROP TABLE IF EXISTS `inventory_transactions`;
+CREATE TABLE `inventory_transactions` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `item_id` BIGINT DEFAULT NULL,
+
+  `transaction_type` VARCHAR(50) DEFAULT NULL,
+
+  `quantity` INT DEFAULT NULL,
+
+  `before_stock` INT DEFAULT NULL,
+  `after_stock` INT DEFAULT NULL,
+
+  `reference_type` VARCHAR(50) DEFAULT NULL,
+  `reference_id` BIGINT DEFAULT NULL,
+
+  `performed_by` BIGINT DEFAULT NULL,
+
+  `remarks` VARCHAR(255) DEFAULT NULL,
+  `stock_type` VARCHAR(50) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- external_participants
+-- =====================
+DROP TABLE IF EXISTS `external_participants`;
+CREATE TABLE `external_participants` (
+  `participant_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `name` VARCHAR(255) NOT NULL,
+  `email` VARCHAR(255) NOT NULL,
+  `phone` VARCHAR(255) DEFAULT NULL,
+  `organization` VARCHAR(255) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`participant_id`),
+
+  UNIQUE KEY `uk_external_participants_email`
+  (`email`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- items
+-- =====================
+DROP TABLE IF EXISTS `items`;
+CREATE TABLE `items` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `sku_code` VARCHAR(255) NOT NULL,
+
+  `item_name` VARCHAR(255) DEFAULT NULL,
+  `category` VARCHAR(255) DEFAULT NULL,
+  `description` VARCHAR(255) DEFAULT NULL,
+
+  `unit` VARCHAR(255) DEFAULT NULL,
+  `location` VARCHAR(255) DEFAULT NULL,
+
+  `min_stock_level` INT DEFAULT NULL,
+  `opening_stock` INT DEFAULT NULL,
+
+  `price` DOUBLE DEFAULT NULL,
+  `tax_percentage` DOUBLE DEFAULT NULL,
+
+  `is_refundable` TINYINT(1) DEFAULT NULL,
+  `is_trackable` TINYINT(1) DEFAULT NULL,
+  `is_consumable` TINYINT(1) DEFAULT NULL,
+
+  `linked_course_id` BIGINT DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_items_sku_code` (`sku_code`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- question
+-- =====================
+DROP TABLE IF EXISTS `question`;
+CREATE TABLE `question` (
+  `question_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `question_text` VARCHAR(1000) DEFAULT NULL,
+  `question_image_url` VARCHAR(255) DEFAULT NULL,
+
+  `content_type` VARCHAR(50) NOT NULL,
+  `question_type` VARCHAR(50) NOT NULL,
+
+  `programming_language` VARCHAR(50) DEFAULT NULL,
+
+  PRIMARY KEY (`question_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- question_descriptive_answer
+-- =====================
+DROP TABLE IF EXISTS `question_descriptive_answer`;
+CREATE TABLE `question_descriptive_answer` (
+  `descriptive_answer_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `question_id` BIGINT NOT NULL,
+
+  `answer_text` TEXT NOT NULL,
+  `keywords` TEXT,
+  `keyword_weight` DOUBLE DEFAULT NULL,
+  `guidelines` TEXT,
+
+  `created_at` DATETIME NOT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`descriptive_answer_id`),
+
+  UNIQUE KEY `uk_question_descriptive_answer`
+  (`question_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- question_option
+-- =====================
+DROP TABLE IF EXISTS `question_option`;
+CREATE TABLE `question_option` (
+  `option_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `question_id` BIGINT NOT NULL,
+
+  `option_text` TEXT,
+  `option_image_url` VARCHAR(255) DEFAULT NULL,
+
+  `is_correct` TINYINT(1) NOT NULL,
+
+  PRIMARY KEY (`option_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- question_section
+-- =====================
+DROP TABLE IF EXISTS `question_section`;
+CREATE TABLE `question_section` (
+  `section_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `section_name` VARCHAR(255) NOT NULL,
+  `section_description` TEXT,
+
+  `shuffle_questions` TINYINT(1) NOT NULL,
+
+  `created_at` DATETIME NOT NULL,
+
+  PRIMARY KEY (`section_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+
+-- =====================
+-- returns_damage
+-- =====================
+DROP TABLE IF EXISTS `returns_damage`;
+CREATE TABLE `returns_damage` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `item_id` BIGINT DEFAULT NULL,
+
+  `issued_ref_id` BIGINT DEFAULT NULL,
+  `quantity` INT DEFAULT NULL,
+  `returned_by` BIGINT DEFAULT NULL,
+
+  `type` VARCHAR(50) DEFAULT NULL,
+  `item_condition` VARCHAR(50) DEFAULT NULL,
+  `action_required` VARCHAR(50) DEFAULT NULL,
+
+  `penalty_fee` DOUBLE DEFAULT NULL,
+  `remarks` VARCHAR(255) DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+  `approved_by` BIGINT DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- section_question
+-- =====================
+DROP TABLE IF EXISTS `section_question`;
+CREATE TABLE `section_question` (
+  `section_question_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `section_id` BIGINT NOT NULL,
+  `question_id` BIGINT NOT NULL,
+
+  `display_order` INT DEFAULT NULL,
+
+  PRIMARY KEY (`section_question_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- =====================
+-- session
+-- =====================
+DROP TABLE IF EXISTS `session`;
+CREATE TABLE `session` (
+  `session_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `course_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+
+  `session_name` VARCHAR(255) NOT NULL,
+
+  `start_date` DATE NOT NULL,
+  `start_time` TIME NOT NULL,
+
+  `duration_minutes` INT NOT NULL,
+
+  `days` VARCHAR(100) NOT NULL,
+  `session_type` VARCHAR(50) NOT NULL,
+
+  `meeting_link` VARCHAR(255) DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  `topic_id` BIGINT DEFAULT NULL,
+
+  PRIMARY KEY (`session_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- =====================
+-- session_content
+-- =====================
+DROP TABLE IF EXISTS `session_content`;
+CREATE TABLE `session_content` (
+  `session_content_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `session_id` BIGINT NOT NULL,
+
+  `title` VARCHAR(255) NOT NULL,
+  `description` VARCHAR(1000) DEFAULT NULL,
+
+  `content_type` VARCHAR(50) NOT NULL,
+  `file_url` VARCHAR(255) DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  `total_duration` INT DEFAULT NULL,
+
+  PRIMARY KEY (`session_content_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- stock_inward
+-- =====================
+DROP TABLE IF EXISTS `stock_inward`;
+CREATE TABLE `stock_inward` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `po_reference` VARCHAR(255) DEFAULT NULL,
+
+  `vendor_id` BIGINT DEFAULT NULL,
+  `item_id` BIGINT DEFAULT NULL,
+
+  `quantity_received` INT DEFAULT NULL,
+
+  `cost_per_unit` DOUBLE DEFAULT NULL,
+  `tax_percent` DOUBLE DEFAULT NULL,
+  `total_amount` DOUBLE DEFAULT NULL,
+
+  `invoice_file` VARCHAR(255) DEFAULT NULL,
+
+  `received_by` BIGINT DEFAULT NULL,
+  `received_date` DATETIME DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- stock_outward
+-- =====================
+DROP TABLE IF EXISTS `stock_outward`;
+CREATE TABLE `stock_outward` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `item_id` BIGINT DEFAULT NULL,
+
+  `issued_to_id` BIGINT DEFAULT NULL,
+  `recipient_type` VARCHAR(50) DEFAULT NULL,
+
+  `reason` VARCHAR(255) DEFAULT NULL,
+  `quantity` INT DEFAULT NULL,
+
+  `returned_quantity` INT DEFAULT NULL,
+
+  `returnable` TINYINT(1) DEFAULT NULL,
+
+  `issued_by` BIGINT DEFAULT NULL,
+
+  `status` VARCHAR(50) DEFAULT NULL,
+  `reference` VARCHAR(255) DEFAULT NULL,
+
+  `issue_date` DATETIME DEFAULT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- =====================
+-- student_batch
+-- =====================
+DROP TABLE IF EXISTS `student_batch`;
+CREATE TABLE `student_batch` (
+  `student_batch_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `student_id` BIGINT NOT NULL,
+  `student_name` VARCHAR(255) NOT NULL,
+  `student_email` VARCHAR(255) NOT NULL,
+
+  `course_id` BIGINT NOT NULL,
+  `batch_id` BIGINT NOT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+
+  `joined_at` DATETIME NOT NULL,
+
+  `user_id` BIGINT DEFAULT NULL,
+
+  PRIMARY KEY (`student_batch_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- student_batch_transfer
+-- =====================
+DROP TABLE IF EXISTS `student_batch_transfer`;
+CREATE TABLE `student_batch_transfer` (
+  `transfer_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `student_id` BIGINT NOT NULL,
+  `course_id` BIGINT NOT NULL,
+
+  `from_batch_id` BIGINT NOT NULL,
+  `to_batch_id` BIGINT NOT NULL,
+
+  `reason` VARCHAR(500) DEFAULT NULL,
+
+  `transferred_by` VARCHAR(255) NOT NULL,
+  `transferred_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`transfer_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- student_calendar_event
+-- =====================
+DROP TABLE IF EXISTS `student_calendar_event`;
+CREATE TABLE `student_calendar_event` (
+  `event_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `user_id` BIGINT NOT NULL,
+
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+
+  `event_date` DATE NOT NULL,
+
+  `start_time` TIME NOT NULL,
+  `end_time` TIME NOT NULL,
+
+  `event_type` VARCHAR(50) NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`event_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- student_video_progress
+-- =====================
+DROP TABLE IF EXISTS `student_video_progress`;
+CREATE TABLE `student_video_progress` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `student_id` BIGINT NOT NULL,
+  `session_content_id` BIGINT NOT NULL,
+  `session_id` BIGINT NOT NULL,
+
+  `watched_duration` BIGINT NOT NULL,
+  `last_watched_position` BIGINT NOT NULL,
+  `total_duration_snapshot` BIGINT NOT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+  `completed_at` DATETIME DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `last_updated_at` DATETIME DEFAULT NULL,
+
+  `percentage_watched` DOUBLE DEFAULT NULL,
+  `user_id` BIGINT DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_student_video_progress`
+  (`student_id`, `session_content_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- support_tickets
+-- =====================
+DROP TABLE IF EXISTS `support_tickets`;
+CREATE TABLE `support_tickets` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `ticket_code` VARCHAR(255) NOT NULL,
+
+  `student_id` BIGINT NOT NULL,
+  `subject` VARCHAR(255) NOT NULL,
+  `description` TEXT NOT NULL,
+
+  `category` VARCHAR(50) NOT NULL,
+  `priority` VARCHAR(50) NOT NULL,
+  `status` VARCHAR(50) NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_ticket_code` (`ticket_code`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- ticket_messages
+-- =====================
+DROP TABLE IF EXISTS `ticket_messages`;
+CREATE TABLE `ticket_messages` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `ticket_id` BIGINT NOT NULL,
+  `sender_type` VARCHAR(50) NOT NULL,
+  `message` TEXT NOT NULL,
+  `attachment_url` VARCHAR(255) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- topics
+-- =====================
+DROP TABLE IF EXISTS `topics`;
+CREATE TABLE `topics` (
+  `topic_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `topic_name` VARCHAR(255) NOT NULL,
+  `topic_description` VARCHAR(255) DEFAULT NULL,
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `course_id` BIGINT NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  `sequence_order` INT DEFAULT NULL,
+
+  PRIMARY KEY (`topic_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- topic_contents
+-- =====================
+DROP TABLE IF EXISTS `topic_contents`;
+CREATE TABLE `topic_contents` (
+  `content_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `content_type` VARCHAR(50) NOT NULL,
+  `content_source` VARCHAR(50) NOT NULL,
+  `content_title` VARCHAR(255) NOT NULL,
+  `content_description` VARCHAR(1000) DEFAULT NULL,
+
+  `file_url` VARCHAR(255) DEFAULT NULL,
+  `content_order` INT DEFAULT NULL,
+
+  `topic_id` BIGINT NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`content_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- vendors
+-- =====================
+DROP TABLE IF EXISTS `vendors`;
+CREATE TABLE `vendors` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `vendor_code` VARCHAR(255) NOT NULL,
+  `vendor_name` VARCHAR(255) NOT NULL,
+
+  `contact_person` VARCHAR(255) DEFAULT NULL,
+  `phone_number` VARCHAR(255) DEFAULT NULL,
+  `email` VARCHAR(255) DEFAULT NULL,
+
+  `vendor_type` VARCHAR(100) DEFAULT NULL,
+  `status` VARCHAR(50) DEFAULT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  `gst_number` VARCHAR(100) DEFAULT NULL,
+  `pan_number` VARCHAR(100) DEFAULT NULL,
+
+  `street_address` VARCHAR(255) DEFAULT NULL,
+  `city` VARCHAR(100) DEFAULT NULL,
+  `state` VARCHAR(100) DEFAULT NULL,
+  `pincode` VARCHAR(20) DEFAULT NULL,
+
+  `bank_name` VARCHAR(255) DEFAULT NULL,
+  `account_number` VARCHAR(255) DEFAULT NULL,
+  `ifsc_code` VARCHAR(100) DEFAULT NULL,
+  `branch_name` VARCHAR(255) DEFAULT NULL,
+  `payment_terms` VARCHAR(255) DEFAULT NULL,
+
+  `gst_certificate_path` VARCHAR(255) DEFAULT NULL,
+  `bank_proof_path` VARCHAR(255) DEFAULT NULL,
+  `agreement_path` VARCHAR(255) DEFAULT NULL,
+
+  PRIMARY KEY (`id`),
+
+  UNIQUE KEY `uk_vendor_code` (`vendor_code`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- vendor_items
+-- =====================
+DROP TABLE IF EXISTS `vendor_items`;
+CREATE TABLE `vendor_items` (
+  `vendor_id` BIGINT NOT NULL,
+  `item_id` BIGINT NOT NULL,
+
+  PRIMARY KEY (`vendor_id`, `item_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar
+-- =====================
+DROP TABLE IF EXISTS `webinar`;
+CREATE TABLE `webinar` (
+  `webinar_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT,
+
+  `trainer_id` BIGINT NOT NULL,
+
+  `mode` VARCHAR(50) NOT NULL,
+  `type` VARCHAR(50) NOT NULL,
+  `status` VARCHAR(50) NOT NULL,
+
+  `start_time` DATETIME NOT NULL,
+  `duration_minutes` INT NOT NULL,
+  `timezone` VARCHAR(100) NOT NULL,
+
+  `max_participants` INT NOT NULL,
+  `registered_count` INT NOT NULL,
+
+  `meeting_link` VARCHAR(255) DEFAULT NULL,
+
+  `venue_name` VARCHAR(255) DEFAULT NULL,
+  `venue_address` VARCHAR(255) DEFAULT NULL,
+  `venue_city` VARCHAR(100) DEFAULT NULL,
+  `venue_country` VARCHAR(100) DEFAULT NULL,
+  `map_link` VARCHAR(255) DEFAULT NULL,
+
+  `price` DOUBLE DEFAULT NULL,
+  `image_url` VARCHAR(255) DEFAULT NULL,
+
+  `allow_external` TINYINT(1) NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+  `updated_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`webinar_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar_attendance
+-- =====================
+DROP TABLE IF EXISTS `webinar_attendance`;
+CREATE TABLE `webinar_attendance` (
+  `attendance_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `webinar_id` BIGINT NOT NULL,
+  `registration_id` BIGINT NOT NULL,
+
+  `join_time` DATETIME DEFAULT NULL,
+  `leave_time` DATETIME DEFAULT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+  `mode` VARCHAR(50) NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`attendance_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar_chat_messages
+-- =====================
+DROP TABLE IF EXISTS `webinar_chat_messages`;
+CREATE TABLE `webinar_chat_messages` (
+  `chat_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `webinar_id` BIGINT NOT NULL,
+
+  `sender_id` BIGINT NOT NULL,
+  `sender_name` VARCHAR(100) NOT NULL,
+
+  `message` VARCHAR(1000) NOT NULL,
+
+  `sent_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`chat_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+-- =====================
+-- webinar_polls
+-- =====================
+DROP TABLE IF EXISTS `webinar_polls`;
+CREATE TABLE `webinar_polls` (
+  `poll_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `webinar_id` BIGINT NOT NULL,
+
+  `question` VARCHAR(500) NOT NULL,
+
+  `status` VARCHAR(50) NOT NULL,
+
+  `created_by` BIGINT NOT NULL,
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`poll_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar_poll_options
+-- =====================
+DROP TABLE IF EXISTS `webinar_poll_options`;
+CREATE TABLE `webinar_poll_options` (
+  `poll_id` BIGINT NOT NULL,
+  `option_text` VARCHAR(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar_poll_responses
+-- =====================
+DROP TABLE IF EXISTS `webinar_poll_responses`;
+CREATE TABLE `webinar_poll_responses` (
+  `response_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `poll_id` BIGINT NOT NULL,
+
+  `user_id` BIGINT DEFAULT NULL,
+  `participant_id` BIGINT DEFAULT NULL,
+
+  `selected_option` VARCHAR(255) NOT NULL,
+
+  `responded_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`response_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar_questions
+-- =====================
+DROP TABLE IF EXISTS `webinar_questions`;
+CREATE TABLE `webinar_questions` (
+  `question_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `webinar_id` BIGINT NOT NULL,
+
+  `sender_id` BIGINT NOT NULL,
+  `sender_name` VARCHAR(100) NOT NULL,
+
+  `question` VARCHAR(1000) NOT NULL,
+  `answer` TEXT,
+
+  `status` VARCHAR(50) NOT NULL,
+
+  `asked_at` DATETIME DEFAULT NULL,
+  `answered_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`question_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar_recordings
+-- =====================
+DROP TABLE IF EXISTS `webinar_recordings`;
+CREATE TABLE `webinar_recordings` (
+  `recording_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `webinar_id` BIGINT NOT NULL,
+
+  `recording_url` VARCHAR(255) NOT NULL,
+  `duration_minutes` INT NOT NULL,
+
+  `uploaded_by` BIGINT NOT NULL,
+
+  `created_at` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`recording_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+-- =====================
+-- webinar_registrations
+-- =====================
+DROP TABLE IF EXISTS `webinar_registrations`;
+CREATE TABLE `webinar_registrations` (
+  `registration_id` BIGINT NOT NULL AUTO_INCREMENT,
+
+  `webinar_id` BIGINT NOT NULL,
+
+  `user_id` BIGINT DEFAULT NULL,
+  `participant_id` BIGINT DEFAULT NULL,
+
+  `participant_type` VARCHAR(50) NOT NULL,
+  `registration_status` VARCHAR(50) NOT NULL,
+  `payment_status` VARCHAR(50) NOT NULL,
+
+  `registration_time` DATETIME DEFAULT NULL,
+
+  PRIMARY KEY (`registration_id`)
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 SET FOREIGN_KEY_CHECKS = 1;
